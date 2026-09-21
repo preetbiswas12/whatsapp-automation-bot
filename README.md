@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="dashboard/public/waa_logo.svg" alt="WAA Logo" width="200"/>
+  <img src="dashboard/public/logo.png" alt="WAA Logo" width="200"/>
 </p>
 
 <h1 align="center">WAA — WhatsApp Automation Bot</h1>
