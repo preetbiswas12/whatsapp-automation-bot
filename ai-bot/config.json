@@ -1,0 +1,25 @@
+{
+  "waa": {
+    "host": "http://localhost:2785",
+    "apiKey": "dev-admin-key",
+    "sessionId": "00db2486-5fb9-43ab-b81a-dbfbf6afc2b7"
+  },
+  "llm": {
+    "host": "http://localhost:1234",
+    "model": "deepseek-r1-2b",
+    "systemPrompt": "You are a helpful WhatsApp assistant. Be concise and friendly. Reply in the same language the user writes in.",
+    "maxTokens": 1024,
+    "temperature": 0.7
+  },
+  "webhook": {
+    "port": 3001,
+    "path": "/webhook"
+  },
+  "bot": {
+    "replyDelay": 1500,
+    "ignoreFromMe": true,
+    "ignoreGroups": false,
+    "maxHistoryPerChat": 20,
+    "cooldownSeconds": 5
+  }
+}
