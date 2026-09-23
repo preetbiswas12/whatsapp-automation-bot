@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { APPROVALS_PATH } = require('./../config');
 const { log } = require('./../logger');
+const { writeJsonAtomic } = require('./../utils');
 
 const STATUS = { PENDING: 'pending', APPROVED: 'approved', REJECTED: 'rejected', EXPIRED: 'expired' };
 
@@ -19,7 +20,7 @@ function loadAll() {
 }
 
 function saveAll(approvals) {
-  fs.writeFileSync(APPROVALS_PATH, JSON.stringify(approvals, null, 2), 'utf-8');
+  writeJsonAtomic(APPROVALS_PATH, approvals);
 }
 
 function listPending(maxPending) {

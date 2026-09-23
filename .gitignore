@@ -88,3 +88,6 @@ ai-bot/conversations/
 ai-bot/patterns.json
 ai-bot/approvals.json
 ai-bot/node_modules/
+ai-bot/bot.log
+ai-bot/bot.log.old
+ai-bot/logs/

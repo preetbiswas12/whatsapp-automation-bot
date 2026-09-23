@@ -7,6 +7,7 @@ const path = require('path');
 const config = require('./../config').config;
 const { CONVERSATIONS_DIR } = require('./../config');
 const { log } = require('./../logger');
+const { writeJsonAtomic } = require('./../utils');
 
 function ensureDir() {
   if (!fs.existsSync(CONVERSATIONS_DIR)) {
@@ -38,7 +39,7 @@ function saveHistory(chatId, messages) {
     messageCount: trimmed.length,
     messages: trimmed,
   };
-  fs.writeFileSync(getChatFile(chatId), JSON.stringify(data, null, 2), 'utf-8');
+  writeJsonAtomic(getChatFile(chatId), data);
 }
 
 // Record an incoming user message immediately so context builds while a draft

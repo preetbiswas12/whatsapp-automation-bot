@@ -134,10 +134,17 @@ Edit `config.json`:
 ### Step 5: Start the Bot
 
 ```bash
-npm start
+npm start              # single process (dev)
+npm run start:prod     # supervisor with auto-restart (production)
 ```
 
-Send a message to your WhatsApp number — the bot will reply automatically!
+Send a message to your WhatsApp number — the bot drafts a reply!
+Open **http://localhost:3001/** to **approve** drafts — every approved reply is
+saved as a learned pattern that auto-replies next time.
+
+> 💡 The approval API is protected by `X-Auth-Token`. Set a strong token in
+> production via the `WAA_BOT_API_TOKEN` environment variable (see
+> `ai-bot/README.md` → "Run in Production").
 
 ---
 

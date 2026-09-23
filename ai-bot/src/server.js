@@ -1,16 +1,21 @@
 'use strict';
 
 // HTTP server: webhook receiver, REST API for approvals/patterns, dashboard.
+// - /api/* requires X-Auth-Token (production-safe)
+// - /webhook stays open (WAA signs nothing, so it must not require auth)
+// - /health reports real dependency status
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const config = require('./config').config;
 const { log } = require('./logger');
 const processor = require('./processor');
 const actions = require('./actions');
 const approvalStore = require('./store/approvals');
 const patternStore = require('./store/patterns');
+const { buildHealthReport } = require('./health');
 
 const DASHBOARD_PATH = path.join(__dirname, 'dashboard.html');
 
@@ -38,10 +43,22 @@ function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Bearer-style token check for the admin API. Timing-safe comparison.
+function isAuthorized(req) {
+  const supplied = req.headers['x-auth-token'];
+  const expected = config.server.apiToken;
+  if (!supplied || !expected) return false;
+  const a = Buffer.from(String(supplied));
+  const b = Buffer.from(String(expected));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 // Route table. Handler receives (req, res, pathname, url).
 const ROUTES = [
   { method: 'GET', pattern: /^\/health$/, async handler(req, res) {
-    json(res, 200, { status: 'ok', bot: 'waa-ai-bot' });
+    const report = await buildHealthReport();
+    json(res, report.ok ? 200 : 503, report);
   }},
 
   { method: 'GET', pattern: /^(\/|\/dashboard)$/, async handler(req, res) {
@@ -52,21 +69,21 @@ const ROUTES = [
     res.end(html);
   }},
 
-  { method: 'GET', pattern: /^\/api\/approvals$/, async handler(req, res) {
+  { method: 'GET', pattern: /^\/api\/approvals$/, auth: true, async handler(req, res) {
     json(res, 200, approvalStore.loadAll());
   }},
 
-  { method: 'GET', pattern: /^\/api\/patterns$/, async handler(req, res) {
+  { method: 'GET', pattern: /^\/api\/patterns$/, auth: true, async handler(req, res) {
     json(res, 200, patternStore.loadPatterns());
   }},
 
-  { method: 'POST', pattern: /^\/api\/approvals\/([^/]+)\/approve$/, async handler(req, res, pathname) {
+  { method: 'POST', pattern: /^\/api\/approvals\/([^/]+)\/approve$/, auth: true, async handler(req, res, pathname) {
     const id = pathname.split('/')[3];
     const result = await actions.approve(id);
     json(res, result.ok ? 200 : result.status, result);
   }},
 
-  { method: 'POST', pattern: /^\/api\/approvals\/([^/]+)\/reject$/, async handler(req, res, pathname) {
+  { method: 'POST', pattern: /^\/api\/approvals\/([^/]+)\/reject$/, auth: true, async handler(req, res, pathname) {
     const id = pathname.split('/')[3];
     const result = await actions.reject(id);
     json(res, result.ok ? 200 : result.status, result);
@@ -82,7 +99,7 @@ const ROUTES = [
     json(res, 200, { ok: true });
     // Fire-and-forget so webhook delivery is acknowledged instantly.
     processor.processMessage(payload).catch(err => {
-      log('ERROR', 'Message processing failed', { error: err.message });
+      log.error('ERROR', 'Message processing failed', { error: err.message });
     });
   }},
 ];
@@ -93,14 +110,20 @@ async function handleRequest(req, res) {
 
   const route = ROUTES.find(r => r.method === req.method && r.pattern.test(pathname));
   if (!route) {
-    res.writeHead(404);
-    return res.end('Not found');
+    json(res, 404, { error: 'Not found' });
+    return;
+  }
+
+  if (route.auth && !isAuthorized(req)) {
+    json(res, 401, { error: 'Unauthorized: provide X-Auth-Token header' });
+    log.warn('API', 'Rejected request without valid token', { path: pathname });
+    return;
   }
 
   try {
     await route.handler(req, res, pathname);
   } catch (err) {
-    log('ERROR', `Route ${req.method} ${pathname} failed`, { error: err.message });
+    log.error('SERVER', `Route ${req.method} ${pathname} failed`, { error: err.message });
     if (!res.headersSent) json(res, 500, { error: err.message });
     else res.end();
   }
@@ -108,6 +131,13 @@ async function handleRequest(req, res) {
 
 function startServer() {
   const server = http.createServer(handleRequest);
+  server.on('error', err => {
+    if (err.code === 'EADDRINUSE') {
+      log.error('SERVER', `Port ${config.webhook.port} already in use — is another bot instance running?`);
+    } else {
+      log.error('SERVER', `HTTP server error: ${err.message}`);
+    }
+  });
   server.listen(config.webhook.port, () => {
     log('SERVER', `Bot server listening on port ${config.webhook.port}`);
   });

@@ -9,11 +9,14 @@
     "model": "deepseek-r1-2b",
     "systemPrompt": "You are a helpful WhatsApp assistant. Be concise and friendly. Reply in the same language the user writes in.",
     "maxTokens": 1024,
-    "temperature": 0.7
+    "temperature": 0.7,
+    "timeoutSeconds": 120,
+    "maxRetries": 3
   },
   "webhook": {
     "port": 3001,
-    "path": "/webhook"
+    "path": "/webhook",
+    "refreshSeconds": 300
   },
   "bot": {
     "replyDelay": 1500,
@@ -27,5 +30,11 @@
     "enabled": true,
     "matchThreshold": 0.6,
     "maxPending": 50
+  },
+  "server": {
+    "apiToken": "waa-bot-local-admin",
+    "logLevel": "info",
+    "logFile": "",
+    "timeoutSeconds": 30
   }
 }

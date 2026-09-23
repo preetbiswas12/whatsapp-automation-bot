@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { PATTERNS_PATH } = require('./../config');
 const { log } = require('./../logger');
+const { writeJsonAtomic } = require('./../utils');
 const { jaccardSimilarity, extractKeywords } = require('./../matcher');
 
 const MERGE_THRESHOLD = 0.8; // patterns this similar share one entry
@@ -20,7 +21,7 @@ function loadPatterns() {
 }
 
 function savePatterns(patterns) {
-  fs.writeFileSync(PATTERNS_PATH, JSON.stringify(patterns, null, 2), 'utf-8');
+  writeJsonAtomic(PATTERNS_PATH, patterns);
 }
 
 // Learn from an approved reply. Merges into an existing near-identical pattern,

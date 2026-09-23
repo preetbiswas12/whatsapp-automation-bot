@@ -1,12 +1,33 @@
 'use strict';
 
 // LM Studio client (OpenAI-compatible /v1/chat/completions).
+// Wraps calls with timeouts and retry-on-transient-failure.
 
 const config = require('./config').config;
 const { log } = require('./logger');
+const { retry } = require('./utils');
 const { loadHistory } = require('./store/conversations');
 
-// Low-level chat completion call.
+// HTTP errors carry a numeric status so callers can decide retryability.
+class LlmError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = 'LlmError';
+    this.status = status;
+  }
+}
+
+async function fetchWithTimeout(url, opts, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Low-level chat completion call (with retry).
 async function chat(messages, opts = {}) {
   const body = JSON.stringify({
     model: config.llm.model,
@@ -16,21 +37,42 @@ async function chat(messages, opts = {}) {
     stream: false,
   });
 
-  const res = await fetch(`${config.llm.host}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
+  return retry(async attempt => {
+    try {
+      const res = await fetchWithTimeout(
+        `${config.llm.host}/v1/chat/completions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        },
+        (opts.timeoutMs || config.llm.timeoutSeconds) * 1000
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new LlmError(res.status, `LLM API error ${res.status}: ${err}`);
+      }
+
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (!reply) throw new LlmError(0, 'LLM returned empty response');
+      return reply;
+    } catch (err) {
+      if (err.name === 'AbortError') throw new LlmError(0, 'LLM request timed out');
+      throw err;
+    }
+  }, {
+    attempts: config.llm.maxRetries,
+    baseMs: 1000,
+    shouldRetry: err => {
+      if (err instanceof LlmError) {
+        return err.status >= 500 || err.status === 429 || err.status === 0;
+      }
+      return true; // network-level failures are worth one more try
+    },
+    onRetry: (err, attempt) => log.warn('LLM', `Retry ${attempt} after error: ${err.message}`),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`LLM API error ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error('LLM returned empty response');
-  return reply;
 }
 
 // Draft reply for an incoming message, using prior conversation context.
@@ -42,7 +84,7 @@ async function generateDraft(chatId, userMessage) {
     { role: 'user', content: userMessage },
   ];
   const draft = await chat(messages);
-  log('DRAFT', `Draft generated (${draft.length} chars)`);
+  log.debug('LLM', `Draft generated (${draft.length} chars)`);
   return draft;
 }
 
@@ -58,7 +100,7 @@ async function generateChatSummary(chatId) {
     ];
     return await chat(messages, { maxTokens: 150, temperature: 0.3 });
   } catch (err) {
-    log('LLM', `Chat summary failed: ${err.message}`);
+    log.warn('LLM', `Chat summary failed: ${err.message}`);
     return '';
   }
 }
@@ -72,9 +114,9 @@ async function generateMessageSummary(userMessage) {
     ];
     return await chat(messages, { maxTokens: 100, temperature: 0.3 });
   } catch (err) {
-    log('LLM', `Message summary failed: ${err.message}`);
+    log.warn('LLM', `Message summary failed: ${err.message}`);
     return '';
   }
 }
 
-module.exports = { chat, generateDraft, generateChatSummary, generateMessageSummary };
+module.exports = { chat, generateDraft, generateChatSummary, generateMessageSummary, LlmError };

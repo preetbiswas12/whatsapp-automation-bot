@@ -75,6 +75,20 @@
 </div>
 <script>
 let currentTab = 'pending';
+let apiToken = sessionStorage.getItem('waa_bot_token') || '';
+
+function getToken() {
+  if (!apiToken) {
+    apiToken = prompt('Enter the WAA bot API token (set via WAA_BOT_API_TOKEN):') || '';
+    sessionStorage.setItem('waa_bot_token', apiToken);
+  }
+  return apiToken;
+}
+
+function clearToken() {
+  apiToken = '';
+  sessionStorage.removeItem('waa_bot_token');
+}
 
 function showTab(tab, el) {
   currentTab = tab;
@@ -84,7 +98,17 @@ function showTab(tab, el) {
 }
 
 async function fetchJSON(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'X-Auth-Token': getToken() }, opts.headers || {});
   const res = await fetch(url, opts);
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('Unauthorized — please enter the correct token');
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || ('HTTP ' + res.status));
+  }
   return res.json();
 }
 
