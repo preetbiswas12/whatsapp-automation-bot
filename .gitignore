@@ -83,6 +83,8 @@ _docs/
 # TypeScript incremental build cache (tsc writes this at repo root under the TS6 build config)
 *.tsbuildinfo
 
-# AI Bot conversation data (runtime, not source)
+# AI Bot runtime data (not source)
 ai-bot/conversations/
+ai-bot/patterns.json
+ai-bot/approvals.json
 ai-bot/node_modules/

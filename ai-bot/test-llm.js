@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-// Quick test — sends a message to LM Studio and prints the response
-const fs = require('fs');
-const path = require('path');
-
-const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
+// Quick test — sends a message to LM Studio and prints the response.
+const config = require('./src/config').config;
 
 async function main() {
   const testMsg = process.argv[2] || 'Hello! Who are you?';
