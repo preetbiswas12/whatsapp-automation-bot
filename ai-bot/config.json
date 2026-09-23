@@ -19,7 +19,13 @@
     "replyDelay": 1500,
     "ignoreFromMe": true,
     "ignoreGroups": false,
+    "replyInGroupsOnlyWhenMentioned": true,
     "maxHistoryPerChat": 20,
     "cooldownSeconds": 5
+  },
+  "approval": {
+    "enabled": true,
+    "matchThreshold": 0.6,
+    "maxPending": 50
   }
 }
