@@ -5,7 +5,7 @@
 //  Boots BOTH servers inside ONE process, so `npm run start:prod` loads
 //  everything at once:
 //    1. WAA WhatsApp server  (NestJS → http://localhost:2785, sessions, dashboard)
-//    2. AI Bot + local GGUF  (node   → http://localhost:3001, approval dashboard)
+//    2. AI Bot + kilo.ai API (node   → http://localhost:3001, approval dashboard)
 //
 //  Stop everything with Ctrl+C — both shut down together.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

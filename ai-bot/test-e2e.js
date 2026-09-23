@@ -4,9 +4,9 @@
 //
 //  Drives the real webhook + approval API and verifies:
 //    1. auth guard (401 without token, 200 with token)
-//    2. health: WAA + GGUF LLM + webhook all green
-//    3. an incoming message → GGUF draft appears in the approval queue
-//    4. approve is refused cleanly while WhatsApp is NOT connected (no learning)
+//    2. health: WAA + LLM green; webhook pending-until-session-linked
+//    3. an incoming message → AI draft (kilo.ai http) appears in the approval queue
+//    4. approve: refused when no session, succeeds (send+learn) when linked
 //    5. reject works and persists
 //    6. patterns endpoint + dashboard serve
 //
@@ -71,12 +71,18 @@ function sendFake(text, key) {
   const withAuth = await req('/api/approvals');
   ok('API accepts valid token (200)', withAuth.status === 200, `got ${withAuth.status}`);
 
-  // 2) health all green
+  // 2) health: WAA + LLM must be green; webhook is green only when a WhatsApp
+  //    session is linked (after wiping sessions it is legitimately pending).
   const h = await req('/health', { auth: false });
-  ok('Health: WAA + LLM + webhook all ok', h.body?.ok === true,
-    `llm=${h.body?.checks?.llm?.ok} waa=${h.body?.checks?.waa?.ok} webhook=${h.body?.checks?.webhook?.ok}`);
-  ok('Health: GGUF engine in-process', h.body?.checks?.llm?.engine === 'gguf',
-    `model=${h.body?.checks?.llm?.modelPath}`);
+  const hw = h.body?.checks?.webhook || {};
+  ok('Health: WAA + LLM up', h.body?.checks?.waa?.ok === true && h.body?.checks?.llm?.ok === true,
+    `llm=${h.body?.checks?.llm?.ok} waa=${h.body?.checks?.waa?.ok} webhook=${hw.ok}`);
+  const noSessionWebhook = !hw.ok && /no session/i.test(String(hw.lastError || ''));
+  ok('Health: webhook registered (or pending until session linked)',
+    hw.ok === true || noSessionWebhook,
+    `webhook=${hw.ok}${noSessionWebhook ? ' (expected: link WhatsApp first)' : ''} ${hw.lastError || ''}`);
+  ok('Health: LLM engine configured', ['gguf', 'http'].includes(h.body?.checks?.llm?.engine),
+    `model=${h.body?.checks?.llm?.configuredModel} engine=${h.body?.checks?.llm?.engine}`);
 
   // 3) simulate an incoming WhatsApp message → draft must be queued
   const before = asArray((await req('/api/approvals')).body);
@@ -84,7 +90,7 @@ function sendFake(text, key) {
   const wh = await sendFake('Hello! What are your opening hours?', key);
   ok('Webhook accepts simulated message', wh.status === 200 || wh.status === 202, `got ${wh.status}`);
 
-  console.log('⏳ waiting for GGUF draft generation (CPU, up to ~180s)...');
+  console.log('⏳ waiting for AI draft generation (kilo.ai, up to ~120s)...');
   let mine;
   for (let i = 0; i < 180 && !mine; i++) {
     const all = asArray((await req('/api/approvals')).body);

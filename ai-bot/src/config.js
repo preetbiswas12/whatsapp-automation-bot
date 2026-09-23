@@ -8,6 +8,9 @@ const path = require('path');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const CONFIG_PATH = path.join(ROOT_DIR, 'config.json');
+// config.local.json (gitignored) overlays config.json for machine-local secrets
+// such as the LLM API key — so the key never reaches GitHub.
+const LOCAL_CONFIG_PATH = path.join(ROOT_DIR, 'config.local.json');
 const CONVERSATIONS_DIR = path.join(ROOT_DIR, 'conversations');
 const PATTERNS_PATH = path.join(ROOT_DIR, 'patterns.json');
 const APPROVALS_PATH = path.join(ROOT_DIR, 'approvals.json');
@@ -17,11 +20,14 @@ const DEFAULTS = {
   waa: { host: 'http://localhost:2785', apiKey: '', sessionId: '' },
   llm: {
     // engine: 'gguf' loads your .gguf in-process (node-llama-cpp).
-    //         'http' talks to an OpenAI-compatible server (host/model).
+    //         'http' talks to an OpenAI-compatible server (host/model/apiKey).
     engine: 'gguf',
     host: 'http://localhost:1234',
     model: '',
     modelPath: '',
+    apiKey: '',            // Bearer token for engine=http (e.g. kilo.ai) — put in config.local.json
+    completionsPath: '/v1/chat/completions', // engine=http endpoint (kilo.ai: /chat/completions)
+    modelsPath: '/v1/models',                // engine=http health endpoint (kilo.ai: /models)
     contextSize: 8192,   // KV-cache: ~57KB/token on this model — 8192 ≈ +470MB (safe on 6GB RAM)
     stripReasoning: true,
     systemPrompt: 'You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. ALWAYS reply in English, no matter what language the incoming message is in.',
@@ -75,6 +81,9 @@ function applyEnvOverrides(config) {
   if (process.env.WAA_LLM_MODEL_PATH) config.llm.modelPath = process.env.WAA_LLM_MODEL_PATH;
   if (process.env.WAA_LLM_HOST) config.llm.host = process.env.WAA_LLM_HOST;
   if (process.env.WAA_LLM_MODEL) config.llm.model = process.env.WAA_LLM_MODEL;
+  if (process.env.WAA_LLM_API_KEY) config.llm.apiKey = process.env.WAA_LLM_API_KEY;
+  if (process.env.WAA_LLM_COMPLETIONS_PATH) config.llm.completionsPath = process.env.WAA_LLM_COMPLETIONS_PATH;
+  if (process.env.WAA_LLM_MODELS_PATH) config.llm.modelsPath = process.env.WAA_LLM_MODELS_PATH;
   return config;
 }
 
@@ -108,7 +117,8 @@ function discoverModelFile(rootDir) {
 function validateConfig(config) {
   if (!config.waa.host) throw new Error('config.json: waa.host is required');
   if (!config.waa.apiKey) throw new Error('config.json: waa.apiKey is required');
-  if (!config.waa.sessionId) throw new Error('config.json: waa.sessionId is required');
+  // sessionId is optional: when empty/falsey the bot auto-adopts whatever
+  // WhatsApp session is connected on the WAA server (fresh-login friendly).
   if (!config.server.apiToken || config.server.apiToken === 'waa-bot-change-me') {
     throw new Error('Set an API token: put WAA_BOT_API_TOKEN in your environment (or server.apiToken in config.json). The default token is not allowed in production.');
   }
@@ -134,7 +144,12 @@ function loadConfig() {
     throw new Error(`Config file not found: ${CONFIG_PATH}`);
   }
   const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-  const config = applyEnvOverrides(deepMerge(DEFAULTS, raw));
+  let base = deepMerge(DEFAULTS, raw);
+  // Machine-local overlays (API keys etc.) never committed to the repo.
+  if (fs.existsSync(LOCAL_CONFIG_PATH)) {
+    base = deepMerge(base, JSON.parse(fs.readFileSync(LOCAL_CONFIG_PATH, 'utf-8')));
+  }
+  const config = applyEnvOverrides(base);
 
   if (config.llm.engine === 'gguf' && !config.llm.modelPath) {
     const found = discoverModelFile(ROOT_DIR);

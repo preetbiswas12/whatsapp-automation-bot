@@ -59,11 +59,14 @@ async function chatHttp(messages, opts = {}) {
     stream: false,
   });
 
+  const headers = { 'Content-Type': 'application/json' };
+  if (config.llm.apiKey) headers.Authorization = `Bearer ${config.llm.apiKey}`;
+
   return retry(async () => {
     try {
       const res = await fetchWithTimeout(
-        `${config.llm.host}/v1/chat/completions`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+        `${config.llm.host}${config.llm.completionsPath}`,
+        { method: 'POST', headers, body },
         (opts.timeoutMs || config.llm.timeoutSeconds) * 1000
       );
       if (!res.ok) {
@@ -204,12 +207,25 @@ function stripReasoning(output) {
   return out.trim();
 }
 
+// Serialize every LLM call for the stateful in-process LlamaChatSession: the
+// session is NOT safe for concurrent prompt() calls (they corrupt each other's
+// chat history). One call at a time, FIFO.
+let llmQueue = Promise.resolve();
+async function withLlmLock(fn) {
+  const run = llmQueue.then(fn, fn);
+  // Keep the chain alive even when a call rejects.
+  llmQueue = run.then(() => undefined, () => undefined);
+  return run;
+}
+
 // ─── Public API (used by processor / actions) ────────────────────────────────
 async function chat(messages, opts = {}) {
-  const reply = config.llm.engine === 'gguf'
-    ? await chatGguf(messages, opts)
-    : await chatHttp(messages, opts);
-  return reply;
+  return withLlmLock(async () => {
+    const reply = config.llm.engine === 'gguf'
+      ? await chatGguf(messages, opts)
+      : await chatHttp(messages, opts);
+    return reply;
+  });
 }
 
 // Shown when the model returns empty output even after a retry.

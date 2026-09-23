@@ -91,3 +91,4 @@ ai-bot/node_modules/
 ai-bot/bot.log
 ai-bot/bot.log.old
 ai-bot/logs/
+ai-bot/config.local.json

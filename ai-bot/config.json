@@ -2,13 +2,16 @@
   "waa": {
     "host": "http://localhost:2785",
     "apiKey": "dev-admin-key",
-    "sessionId": "00db2486-5fb9-43ab-b81a-dbfbf6afc2b7"
+    "sessionId": ""
   },
   "llm": {
-    "engine": "gguf",
-    "host": "http://localhost:1234",
-    "model": "DeepSeek-R1-Distill-Qwen-1.5B",
-    "modelPath": "C:/Users/preet/Downloads/ai_clg/wapp/ai.gguf",
+    "engine": "http",
+    "host": "https://api.kilo.ai/api/gateway",
+    "model": "kilo-auto/free",
+    "modelPath": "",
+    "apiKey": "",
+    "completionsPath": "/chat/completions",
+    "modelsPath": "/models",
     "contextSize": 8192,
     "stripReasoning": true,
     "systemPrompt": "You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. ALWAYS reply in English, no matter what language the incoming message is in.",

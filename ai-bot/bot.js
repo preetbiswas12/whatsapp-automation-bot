@@ -10,7 +10,7 @@
 //    src/actions.js    → approve/reject resolution
 //    src/health.js     → dependency health reporting
 //    src/store/*       → conversations, patterns, approvals persistence
-//    src/llm.js        → local LLM (in-process GGUF or HTTP, retries + timeouts)
+//    src/llm.js        → LLM client (kilo.ai HTTP or in-process GGUF, retries + timeouts)
 //    src/waa.js        → WAA server client + webhook registration
 //
 //  Production behavior:
@@ -67,7 +67,7 @@ async function main() {
     `🧠 LLM engine:    ${config.llm.engine === 'gguf' ? `GGUF in-process (${config.llm.modelPath})` : `HTTP (${config.llm.host} / ${config.llm.model})`}`,
     `🔗 Webhook:       http://localhost:${config.webhook.port}${config.webhook.path}`,
     `📊 Dashboard:     http://localhost:${config.webhook.port}/`,
-    `💬 Session:       ${config.waa.sessionId}`,
+    `💬 Session:       ${config.waa.sessionId || '(auto-detect on login)'}`,
     `📚 Patterns:      ${patternStore.loadPatterns().length} learned`,
     `⏳ Pending:       ${approvalStore.listPending().length} awaiting approval`,
     `🎯 Match thresh:  ${config.approval.matchThreshold}`,

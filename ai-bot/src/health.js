@@ -54,7 +54,10 @@ async function checkLlm() {
 
   const started = Date.now();
   try {
-    const res = await fetch(`${config.llm.host}/v1/models`, {
+    const headers = {};
+    if (config.llm.apiKey) headers.Authorization = `Bearer ${config.llm.apiKey}`;
+    const res = await fetch(`${config.llm.host}${config.llm.modelsPath}`, {
+      headers,
       signal: AbortSignal.timeout(5000),
     });
     const data = res.ok ? await res.json() : {};

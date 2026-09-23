@@ -1,14 +1,15 @@
-# WAA AI Bot — Local LLM + Approval-Based Learning
+# WAA AI Bot — kilo.ai LLM + Approval-Based Learning
 
-Fully automated WhatsApp AI bot driven by a local LLM (no API keys). The bot
-watches chats, drafts replies, and waits for **your approval** before sending.
-Every approved reply becomes a **learned pattern** that auto-replies the next
-time someone says something similar — no approval needed.
+Fully automated WhatsApp AI bot powered by the **kilo.ai Gateway** (OpenAI-compatible
+cloud API, `kilo-auto/free` model = $0). The bot watches chats, drafts replies,
+and waits for **your approval** before sending. Every approved reply becomes a
+**learned pattern** that auto-replies the next time someone says something
+similar — no approval needed.
 
 ## Architecture
 
 ```
-WhatsApp User → WAA Server → Webhook → AI Bot → Local LLM (GGUF) → Draft
+WhatsApp User → WAA Server → Webhook → AI Bot → kilo.ai Gateway (free model) → Draft
                                               │
                                               ▼
                                     Needs approval?
@@ -25,37 +26,55 @@ WhatsApp User → WAA Server → Webhook → AI Bot → Local LLM (GGUF) → Dra
           Learn pattern
 ```
 
-## Setup (no LM Studio required)
+## Setup (no LM Studio, no local model)
 
-The bot loads your `.gguf` **in-process** via `node-llama-cpp` — there is no
-separate LLM server to run. One command starts everything.
+The bot calls the **kilo.ai Gateway** (`https://api.kilo.ai/api/gateway`) — an
+OpenAI-compatible cloud API — so nothing heavy runs on your machine. Engine
+`http` is the default; a local in-process GGUF is still supported as an
+alternative (`engine: "gguf"` via node-llama-cpp).
 
-### 1. Install the model runtime
+### 1. Install
 
 ```bash
 cd ai-bot
-npm install          # installs node-llama-cpp (downloads llama.cpp binaries)
+npm install          # installs deps (no llama binaries needed for engine=http)
 ```
 
-### 2. Point the bot at your GGUF file
+### 2. Add your kilo.ai API key (gitignored — never committed)
 
-Edit `config.json`:
+Your key goes in **`ai-bot/config.local.json`** (already in `.gitignore`, so it
+can't be pushed to GitHub):
+
+```json
+{
+  "llm": {
+    "apiKey": "your-kilo-api-key"
+  }
+}
+```
+
+Alternatively set the `WAA_LLM_API_KEY` environment variable.
+
+### 3. Confirm the LLM config (`config.json` already ships set up)
 
 ```json
 "llm": {
-  "engine": "gguf",
-  "modelPath": "C:/path/to/your/model.gguf",
-  "contextSize": 2048,
-  "stripReasoning": true,
+  "engine": "http",
+  "host": "https://api.kilo.ai/api/gateway",
+  "model": "kilo-auto/free",
+  "apiKey": "",
+  "completionsPath": "/chat/completions",
+  "modelsPath": "/models",
   "maxTokens": 512
 }
 ```
 
-- `engine: "gguf"` → run the model directly inside the bot process (default)
-- `engine: "http"` → talk to any OpenAI-compatible server (`llm.host`/`llm.model`,
-  e.g. LM Studio or llama-server)
-- `modelPath` can also be set with `WAA_LLM_MODEL_PATH`; if left empty, the bot
-  auto-discovers the largest `.gguf` in `models/`, your Downloads folder, etc.
+- `model: "kilo-auto/free"` → kilo's free auto-routed model ($0 prompt/completion)
+- Other kilo models: `anthropic/claude-sonnet-4.5`, `openai/gpt-4o-mini`,
+  `google/gemini-2.0-flash`, `mistralai/mistral-small-latest`, …
+  (full list: `GET https://api.kilo.ai/api/gateway/models`)
+- `engine: "gguf"` → fall back to a local `.gguf` (set `modelPath`; auto-discovers
+  the largest `.gguf` in `models/`, Downloads, etc.)
 
 > **R1-style models** (like DeepSeek-R1-Distill): they "think" for many tokens
 > before answering. The bot strips the reasoning block automatically and the
@@ -69,8 +88,10 @@ npm install   # (no deps, but keeps things tidy)
 npm start     # dev (single process)
 ```
 
-Open the dashboard at **http://localhost:3001/** to approve drafts.
-The dashboard will ask for the API token (see `server.apiToken` below).
+Open the **single dashboard** at **http://localhost:3001/** — it combines the
+WhatsApp connection panel (create a session, scan the QR, see status) with the
+approval center (approve/reject AI drafts). No token prompt: the bot injects
+the API token into the page itself.
 
 ## Run in Production
 
@@ -92,17 +113,17 @@ Health check: `npm run health` → hits `GET /health` and exits non-zero when de
 With the stack running (`npm run start:prod` at the repo root), from `ai-bot/`:
 
 ```bash
-npm run setup       # config valid? GGUF present? WAA reachable? API key works?
-npm run test-llm    # sends one prompt through the GGUF, prints reply + seconds
+npm run setup       # config valid? kilo.ai reachable? WAA reachable? API key works?
+npm run test-llm    # sends one prompt through kilo.ai, prints reply + seconds
 npm run test:e2e    # 12 automated checks: auth, health, webhook→draft,
                     # approve-guard, reject, patterns, dashboard (no phone needed)
 ```
 
 - `test:e2e` simulates an incoming WhatsApp message through the real webhook,
-  waits for the **actual GGUF draft**, verifies approval is refused while
+  waits for the **actual AI draft**, verifies approval is refused while
   WhatsApp isn't linked (nothing is learned on a failed send), then verifies
   reject persists. It cleans up after itself.
-- `test-llm` and `test:e2e` respect `WAA_LLM_MODEL_PATH` / `WAA_BOT_API_TOKEN` /
+- `test-llm` and `test:e2e` respect `WAA_LLM_API_KEY` / `WAA_BOT_API_TOKEN` /
   `WAA_BOT_PORT` env vars if you've overridden config.
 
 ### Production checklist
@@ -117,7 +138,8 @@ npm run test:e2e    # 12 automated checks: auth, health, webhook→draft,
    ```
    Env vars override `config.json` for: `WAA_BOT_API_TOKEN`, `WAA_BOT_PORT`,
    `WAA_BOT_LOG_LEVEL`, `WAA_BOT_LOG_FILE`, `WAA_HOST`, `WAA_LLM_ENGINE`,
-   `WAA_LLM_MODEL_PATH`, `WAA_LLM_HOST`, `WAA_LLM_MODEL`.
+   `WAA_LLM_MODEL_PATH`, `WAA_LLM_HOST`, `WAA_LLM_MODEL`, `WAA_LLM_API_KEY`,
+   `WAA_LLM_COMPLETIONS_PATH`, `WAA_LLM_MODELS_PATH`.
 2. **Keep it alive** — `npm run start:prod` (built-in supervisor) or PM2.
 3. **Watch the health endpoint** — `GET /health` returns:
    - `200 ok` — WAA reachable, LLM reachable, webhook registered
@@ -167,19 +189,19 @@ ai-bot/
 ├── approvals.json          # Approval queue (auto-created)
 ├── conversations/          # Per-chat history (auto-created)
 ├── bot.log                 # Runtime log (auto-created, rotated)
-└── src/
-    ├── config.js           # Load + validate config, env overrides, path constants
-    ├── logger.js           # Leveled logging (console + file, rotation)
-    ├── utils.js            # sleep, atomic JSON writes, retry w/ backoff
-    ├── matcher.js          # Keyword extraction + Jaccard similarity
-    ├── guards.js           # Cooldown + dedup trackers
-    ├── llm.js              # LLM client: in-process GGUF (node-llama-cpp) or HTTP
-    ├── waa.js              # WAA server client (timeouts + retries, webhook state)
-    ├── health.js           # Dependency health report
-    ├── processor.js        # Incoming-message pipeline
-    ├── actions.js          # Approve / reject resolution
-    ├── server.js           # HTTP routes (auth, webhook, API, dashboard)
-    ├── dashboard.html      # Approval dashboard UI (token-prompting)
+├── src/
+│   ├── config.js           # Load + validate config, env overrides, path constants
+│   ├── logger.js           # Leveled logging (console + file, rotation)
+│   ├── utils.js            # sleep, atomic JSON writes, retry w/ backoff
+│   ├── matcher.js          # Keyword extraction + Jaccard similarity
+│   ├── guards.js           # Cooldown + dedup trackers
+│   ├── llm.js              # LLM client: kilo.ai HTTP (OpenAI-compatible) or in-process GGUF
+│   ├── waa.js              # WAA client (timeouts/retries, session auto-discovery, webhook state)
+│   ├── health.js           # Dependency health report
+│   ├── processor.js        # Incoming-message pipeline
+│   ├── actions.js          # Approve / reject resolution
+│   ├── server.js           # HTTP routes (auth, webhook, API, WAA proxy, dashboard)
+│   ├── dashboard.html      # Merged dashboard UI (WhatsApp connect + approvals)
     └── store/
         ├── conversations.js  # History persistence
         ├── patterns.js       # Pattern persistence + learning
@@ -190,12 +212,14 @@ ai-bot/
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/` or `/dashboard` | Approval dashboard |
+| GET | `/` or `/dashboard` | Merged dashboard (WhatsApp connect + approvals) |
 | GET | `/health` | Health check |
 | GET | `/api/approvals` | List all approvals |
 | GET | `/api/patterns` | List learned patterns |
 | POST | `/api/approvals/:id/approve` | Send draft + learn pattern |
 | POST | `/api/approvals/:id/reject` | Discard draft |
+| POST | `/api/resync` | (Re-)register the webhook for the active session |
+| ANY | `/api/waa/*` | WAA proxy (sessions, QR, start/stop/logout) — key stays server-side |
 | POST | `/webhook` | WAA webhook receiver |
 
 ## Config Options
@@ -204,17 +228,20 @@ ai-bot/
 |---------|---------|-------------|
 | `waa.host` | `http://localhost:2785` | WAA server URL |
 | `waa.apiKey` | `dev-admin-key` | Your API key |
-| `waa.sessionId` | *(yours)* | WhatsApp session ID |
-| `llm.engine` | `gguf` | `gguf` = run the model in-process; `http` = OpenAI-compatible server |
-| `llm.host` | `http://localhost:1234` | LLM server URL (engine `http` only) |
-| `llm.model` | *(set it)* | Model name (engine `http`; display label for `gguf`) |
+| `waa.sessionId` | `""` (auto) | Optional pin; when empty the bot adopts whatever session is connected |
+| `llm.engine` | `http` | `http` = kilo.ai / OpenAI-compatible API; `gguf` = in-process local model |
+| `llm.host` | `https://api.kilo.ai/api/gateway` | LLM API base URL (engine `http`) |
+| `llm.model` | `kilo-auto/free` | Model ID for the API (engine `http`; display label for `gguf`) |
+| `llm.apiKey` | *(from `config.local.json`)* | Bearer token — set in `config.local.json` or `WAA_LLM_API_KEY`, never in `config.json` |
+| `llm.completionsPath` | `/chat/completions` | Chat-completions endpoint suffix (engine `http`) |
+| `llm.modelsPath` | `/models` | Health-check model-list endpoint suffix (engine `http`) |
 | `llm.modelPath` | *(auto-discovered)* | Path to your `.gguf` file (engine `gguf`) |
-| `llm.contextSize` | `2048` | Context window for the in-process model |
+| `llm.contextSize` | `8192` | Context window for the in-process model (~470MB KV cache on 6GB RAM) |
 | `llm.stripReasoning` | `true` | Strip R1-style thinking blocks from replies |
 | `llm.systemPrompt` | built-in | System prompt for the AI |
 | `llm.maxTokens` | `512` | Max response length |
 | `llm.temperature` | `0.7` | Response creativity (0-1) |
-| `llm.timeoutSeconds` | `120` | LLM request timeout (LLMs can be slow on CPU) |
+| `llm.timeoutSeconds` | `120` | LLM request timeout (kilo.ai / slow models) |
 | `llm.maxRetries` | `3` | Retries for LLM 5xx/429/network errors |
 | `webhook.refreshSeconds` | `300` | Self-healing re-registration interval |
 | `bot.replyDelay` | `1500` | Typing delay in ms |
