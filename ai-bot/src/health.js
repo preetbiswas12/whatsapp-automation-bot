@@ -1,6 +1,6 @@
 'use strict';
 
-// Health report for the /health endpoint: real checks against WAA and LM Studio
+// Health report for the /health endpoint: real checks against WAA and the LLM engine
 // plus the current webhook-registration state.
 
 const path = require('path');

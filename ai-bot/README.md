@@ -87,6 +87,24 @@ npx pm2 start ecosystem.config.js && npx pm2 save
 
 Health check: `npm run health` → hits `GET /health` and exits non-zero when degraded.
 
+### Check & test (three commands)
+
+With the stack running (`npm run start:prod` at the repo root), from `ai-bot/`:
+
+```bash
+npm run setup       # config valid? GGUF present? WAA reachable? API key works?
+npm run test-llm    # sends one prompt through the GGUF, prints reply + seconds
+npm run test:e2e    # 12 automated checks: auth, health, webhook→draft,
+                    # approve-guard, reject, patterns, dashboard (no phone needed)
+```
+
+- `test:e2e` simulates an incoming WhatsApp message through the real webhook,
+  waits for the **actual GGUF draft**, verifies approval is refused while
+  WhatsApp isn't linked (nothing is learned on a failed send), then verifies
+  reject persists. It cleans up after itself.
+- `test-llm` and `test:e2e` respect `WAA_LLM_MODEL_PATH` / `WAA_BOT_API_TOKEN` /
+  `WAA_BOT_PORT` env vars if you've overridden config.
+
 ### Production checklist
 
 1. **Set a real API token** — the dashboard and `/api/*` endpoints require
@@ -144,6 +162,7 @@ ai-bot/
 ├── config.json             # Configuration
 ├── setup.js                # Connection checker
 ├── test-llm.js             # LLM smoke test
+├── test-e2e.js             # End-to-end check (12 checks, no phone needed)
 ├── patterns.json           # Learned templates (auto-created)
 ├── approvals.json          # Approval queue (auto-created)
 ├── conversations/          # Per-chat history (auto-created)

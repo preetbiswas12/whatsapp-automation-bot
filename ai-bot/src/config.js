@@ -24,7 +24,7 @@ const DEFAULTS = {
     modelPath: '',
     contextSize: 2048,   // keep the KV cache small for low-RAM machines
     stripReasoning: true,
-    systemPrompt: 'You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. Reply in the same language the user writes in.',
+    systemPrompt: 'You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. ALWAYS reply in English, no matter what language the incoming message is in.',
     maxTokens: 512,
     temperature: 0.7,
     timeoutSeconds: 120,   // http engine only

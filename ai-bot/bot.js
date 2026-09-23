@@ -10,7 +10,7 @@
 //    src/actions.js    → approve/reject resolution
 //    src/health.js     → dependency health reporting
 //    src/store/*       → conversations, patterns, approvals persistence
-//    src/llm.js        → LM Studio client (retries + timeouts)
+//    src/llm.js        → local LLM (in-process GGUF or HTTP, retries + timeouts)
 //    src/waa.js        → WAA server client + webhook registration
 //
 //  Production behavior:

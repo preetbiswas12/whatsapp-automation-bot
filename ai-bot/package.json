@@ -9,6 +9,7 @@
     "dev": "node bot.js",
     "setup": "node setup.js",
     "test-llm": "node test-llm.js",
+    "test:e2e": "node test-e2e.js",
     "health": "node -e \"fetch('http://localhost:3001/health').then(r => r.json()).then(j => { console.log(j.status, JSON.stringify(j.checks, null, 2)); process.exit(j.ok ? 0 : 1); })\"",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop waa-ai-bot",

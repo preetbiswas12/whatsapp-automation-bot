@@ -1,36 +1,32 @@
 #!/usr/bin/env node
-// Quick test — sends a message to LM Studio and prints the response.
-const config = require('./src/config').config;
+// Quick LLM smoke test — sends one prompt through the configured engine
+// (in-process GGUF, or an HTTP OpenAI-compatible server when engine=http)
+// and prints the reply + timing.
+
+const { config } = require('./src/config');
+const llm = require('./src/llm');
 
 async function main() {
   const testMsg = process.argv[2] || 'Hello! Who are you?';
-  console.log(`\n🧪 Testing LLM: ${config.llm.model} at ${config.llm.host}`);
-  console.log(`📝 Message: "${testMsg}"\n`);
+  const label = config.llm.engine === 'gguf'
+    ? `GGUF in-process (${config.llm.modelPath})`
+    : `HTTP ${config.llm.host} (${config.llm.model})`;
 
-  const res = await fetch(`${config.llm.host}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: config.llm.model,
-      messages: [
-        { role: 'system', content: config.llm.systemPrompt },
-        { role: 'user', content: testMsg },
-      ],
-      max_tokens: config.llm.maxTokens,
-      temperature: config.llm.temperature,
-    }),
-  });
+  console.log(`\n🧪 Testing LLM: engine=${config.llm.engine} — ${label}`);
+  console.log(`💬 Message: "${testMsg}"\n`);
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error(`❌ Error ${res.status}: ${err}`);
-    process.exit(1);
-  }
-
-  const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content;
-  console.log(`🤖 Reply:\n${reply}\n`);
-  console.log(`📊 Tokens — prompt: ${data.usage?.prompt_tokens}, completion: ${data.usage?.completion_tokens}`);
+  const started = Date.now();
+  const reply = await llm.chat([
+    { role: 'system', content: config.llm.systemPrompt },
+    { role: 'user', content: testMsg },
+  ]);
+  const secs = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(`✅ Reply (${secs}s): ${reply}`);
 }
 
-main().catch(err => { console.error('❌', err.message); process.exit(1); });
+main()
+  .then(() => process.exit(0))
+  .catch(err => {
+    console.error('❌ LLM test failed:', err.message);
+    process.exit(1);
+  });
