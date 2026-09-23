@@ -212,6 +212,9 @@ async function chat(messages, opts = {}) {
   return reply;
 }
 
+// Shown when the model returns empty output even after a retry.
+const FALLBACK_REPLY = 'Sorry, I didn\u2019t quite catch that. Could you rephrase it?';
+
 async function generateDraft(chatId, userMessage) {
   const history = loadHistory(chatId);
   const messages = [
@@ -219,9 +222,33 @@ async function generateDraft(chatId, userMessage) {
     ...history,
     { role: 'user', content: userMessage },
   ];
-  const draft = await chat(messages);
-  log.debug('LLM', `Draft generated (${draft.length} chars)`);
-  return draft;
+
+  let draft = await chat(messages);
+
+  // R1-style models occasionally burn their whole token budget "thinking"
+  // and return nothing. Retry once with a direct-answer nudge.
+  if (!draft || !draft.trim()) {
+    log.warn('LLM', 'Empty draft generated — retrying with a direct-answer nudge');
+    const nudged = [
+      ...messages.slice(0, -1),
+      {
+        role: 'user',
+        content: `${userMessage}\n\nPlease respond NOW with a short, direct answer. No analysis, no reasoning, no thinking.`,
+      },
+    ];
+    draft = await chat(nudged, {
+      maxTokens: Math.min(config.llm.maxTokens * 1.5, 768),
+    });
+  }
+
+  if (!draft || !draft.trim()) {
+    log.warn('LLM', 'Draft still empty after retry — using fallback reply');
+    draft = FALLBACK_REPLY;
+  }
+
+  const trimmed = draft.trim();
+  log.debug('LLM', `Draft generated (${trimmed.length} chars)`);
+  return trimmed;
 }
 
 async function generateChatSummary(chatId) {

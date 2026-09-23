@@ -8,7 +8,7 @@
     "engine": "gguf",
     "host": "http://localhost:1234",
     "model": "DeepSeek-R1-Distill-Qwen-1.5B",
-    "modelPath": "C:/Users/preet/Downloads/DeepSeek-R1-Distill-Qwen-1.5B-Abliterated-dpo.i1-Q6_K.gguf",
+    "modelPath": "C:/Users/preet/Downloads/ai_clg/wapp/ai.gguf",
     "contextSize": 2048,
     "stripReasoning": true,
     "systemPrompt": "You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. Reply in the same language the user writes in.",
