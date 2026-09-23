@@ -16,12 +16,18 @@ const APPROVALS_PATH = path.join(ROOT_DIR, 'approvals.json');
 const DEFAULTS = {
   waa: { host: 'http://localhost:2785', apiKey: '', sessionId: '' },
   llm: {
+    // engine: 'gguf' loads your .gguf in-process (node-llama-cpp).
+    //         'http' talks to an OpenAI-compatible server (host/model).
+    engine: 'gguf',
     host: 'http://localhost:1234',
     model: '',
-    systemPrompt: 'You are a helpful WhatsApp assistant. Be concise and friendly. Reply in the same language the user writes in.',
-    maxTokens: 1024,
+    modelPath: '',
+    contextSize: 2048,   // keep the KV cache small for low-RAM machines
+    stripReasoning: true,
+    systemPrompt: 'You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. Reply in the same language the user writes in.',
+    maxTokens: 512,
     temperature: 0.7,
-    timeoutSeconds: 120,   // LLM can be slow on CPU
+    timeoutSeconds: 120,   // http engine only
     maxRetries: 3,
   },
   webhook: { port: 3001, path: '/webhook', refreshSeconds: 300 },
@@ -64,9 +70,62 @@ function applyEnvOverrides(config) {
   if (process.env.WAA_BOT_LOG_FILE) config.server.logFile = process.env.WAA_BOT_LOG_FILE;
   if (process.env.WAA_BOT_PORT) config.webhook.port = Number(process.env.WAA_BOT_PORT);
   if (process.env.WAA_HOST) config.waa.host = process.env.WAA_HOST;
+  if (process.env.WAA_LLM_ENGINE) config.llm.engine = process.env.WAA_LLM_ENGINE;
+  if (process.env.WAA_LLM_MODEL_PATH) config.llm.modelPath = process.env.WAA_LLM_MODEL_PATH;
   if (process.env.WAA_LLM_HOST) config.llm.host = process.env.WAA_LLM_HOST;
   if (process.env.WAA_LLM_MODEL) config.llm.model = process.env.WAA_LLM_MODEL;
   return config;
+}
+
+// If engine is gguf and no modelPath was set, look for a .gguf in the usual
+// places and pick the largest one.
+function discoverModelFile(rootDir) {
+  const candidates = [
+    path.join(rootDir, 'models'),
+    path.join(process.env.USERPROFILE || '~', 'Downloads'),
+    process.env.USERPROFILE || '~',
+    path.join(process.env.USERPROFILE || '~', '.cache', 'lm-studio', 'models'),
+  ];
+  const found = [];
+  for (const dir of candidates) {
+    if (!dir || !fs.existsSync(dir)) continue;
+    try {
+      for (const entry of fs.readdirSync(dir)) {
+        const full = path.join(dir, entry);
+        try {
+          if (fs.statSync(full).isFile() && entry.toLowerCase().endsWith('.gguf')) {
+            found.push(full);
+          }
+        } catch { /* unreadable entry — skip */ }
+      }
+    } catch { /* unreadable dir — skip */ }
+  }
+  found.sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
+  return found[0] || null;
+}
+
+function validateConfig(config) {
+  if (!config.waa.host) throw new Error('config.json: waa.host is required');
+  if (!config.waa.apiKey) throw new Error('config.json: waa.apiKey is required');
+  if (!config.waa.sessionId) throw new Error('config.json: waa.sessionId is required');
+  if (!config.server.apiToken || config.server.apiToken === 'waa-bot-change-me') {
+    throw new Error('Set an API token: put WAA_BOT_API_TOKEN in your environment (or server.apiToken in config.json). The default token is not allowed in production.');
+  }
+
+  if (config.llm.engine === 'gguf') {
+    if (!config.llm.modelPath || !fs.existsSync(config.llm.modelPath)) {
+      throw new Error(
+        `GGUF model not found: "${config.llm.modelPath}". ` +
+        `Set llm.modelPath (or WAA_LLM_MODEL_PATH) to the path of your .gguf file.`
+      );
+    }
+    // model name is just a display label for gguf mode; keep llm.model optional.
+  } else if (config.llm.engine === 'http') {
+    if (!config.llm.host) throw new Error('config.json: llm.host is required for engine=http');
+    if (!config.llm.model) throw new Error('config.json: llm.model is required for engine=http (set it to the model name shown in LM Studio)');
+  } else {
+    throw new Error(`config.json: llm.engine must be "gguf" or "http" (got "${config.llm.engine}")`);
+  }
 }
 
 function loadConfig() {
@@ -76,16 +135,15 @@ function loadConfig() {
   const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
   const config = applyEnvOverrides(deepMerge(DEFAULTS, raw));
 
-  // Validate the values the bot cannot run without.
-  if (!config.waa.host) throw new Error('config.json: waa.host is required');
-  if (!config.waa.apiKey) throw new Error('config.json: waa.apiKey is required');
-  if (!config.waa.sessionId) throw new Error('config.json: waa.sessionId is required');
-  if (!config.llm.host) throw new Error('config.json: llm.host is required');
-  if (!config.llm.model) throw new Error('config.json: llm.model is required (set it to the model name shown in LM Studio)');
-  if (!config.server.apiToken || config.server.apiToken === 'waa-bot-change-me') {
-    throw new Error('Set an API token: put WAA_BOT_API_TOKEN in your environment (or server.apiToken in config.json). The default token is not allowed in production.');
+  if (config.llm.engine === 'gguf' && !config.llm.modelPath) {
+    const found = discoverModelFile(ROOT_DIR);
+    if (found) {
+      config.llm.modelPath = found;
+      console.log(`[CONFIG] Auto-discovered GGUF model: ${found}`);
+    }
   }
 
+  validateConfig(config);
   return { config, CONFIG_PATH, CONVERSATIONS_DIR, PATTERNS_PATH, APPROVALS_PATH, ROOT_DIR };
 }
 

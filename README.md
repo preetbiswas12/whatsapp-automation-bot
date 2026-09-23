@@ -41,9 +41,9 @@ WhatsApp User
      │
      ▼
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Baileys   │────▶│  WAA Server  │────▶│  LM Studio   │
-│  (WhatsApp  │     │  (Port 2785) │     │  (Port 1234) │
-│  Connection)│     │              │     │  Local LLM   │
+│   Baileys   │────▶│  WAA Server  │────▶│  AI Bot (own │
+│  (WhatsApp  │     │  (Port 2785) │     │  GGUF, in-   │
+│  Connection)│     │              │     │  process LLM)│
 └─────────────┘     └──────┬───────┘     └──────────────┘
                            │
                     ┌──────▼───────┐
@@ -60,7 +60,7 @@ WhatsApp User
 1. WhatsApp message arrives → Baileys receives it
 2. WAA webhook triggers the AI bot
 3. Bot loads conversation history for that chat
-4. Sends context + message to local LLM (LM Studio)
+4. Sends context + message to the local LLM (GGUF loaded in-process — no external server)
 5. LLM generates reply → sent back via WAA API
 6. Conversation saved to JSON for future context
 
@@ -71,7 +71,7 @@ WhatsApp User
 ### Prerequisites
 
 - **Node.js 22+** ([download](https://nodejs.org))
-- **LM Studio** ([download](https://lmstudio.ai)) — for running the local AI model
+- A **GGUF model file** (e.g. a DeepSeek-R1-Distill Q4/Q6 `.gguf` you downloaded)
 - A **dedicated WhatsApp number** (not your personal number)
 
 ### Step 1: Install & Start WAA Server
@@ -92,12 +92,15 @@ Dashboard available at: **http://localhost:2785**
 4. Scan the QR code with WhatsApp on your phone
 5. Wait for "Connected" status
 
-### Step 3: Set Up LM Studio
+### Step 3: Point the Bot at Your GGUF (no LM Studio)
 
-1. Install LM Studio from https://lmstudio.ai
-2. Download a model (e.g., **DeepSeek R1 2B GGUF** — fast, lightweight)
-3. Load the model → start the local server on **port 1234**
-4. Verify: open `http://localhost:1234/v1/models` in browser
+The bot loads your `.gguf` **inside its own process** — no separate LLM server
+to run or configure.
+
+1. Download a model (e.g., **DeepSeek R1 Distill 1.5B GGUF** — runs on CPU)
+2. Set its path in `config.json` (see below)
+3. Check setup with `cd ai-bot && npm run setup` — it verifies the model file
+   and everything else
 
 ### Step 4: Configure the AI Bot
 
@@ -115,10 +118,12 @@ Edit `config.json`:
     "sessionId": "<your-session-uuid>"
   },
   "llm": {
-    "host": "http://localhost:1234",
-    "model": "<model-name-from-lm-studio>",
-    "systemPrompt": "You are a helpful WhatsApp assistant. Be concise and friendly.",
-    "maxTokens": 1024,
+    "engine": "gguf",
+    "modelPath": "C:/path/to/your/model.gguf",
+    "contextSize": 2048,
+    "stripReasoning": true,
+    "systemPrompt": "You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. Reply in the same language the user writes in.",
+    "maxTokens": 512,
     "temperature": 0.7
   },
   "bot": {
@@ -233,8 +238,10 @@ OpenWA/
 | `waa.host` | WAA server URL |
 | `waa.apiKey` | API authentication key |
 | `waa.sessionId` | WhatsApp session UUID |
-| `llm.host` | LM Studio API URL |
-| `llm.model` | Model name (from LM Studio) |
+| `llm.engine` | `gguf` (in-process) or `http` (external server) |
+| `llm.modelPath` | Path to your `.gguf` (engine `gguf`) |
+| `llm.host` | LLM server URL (engine `http` only) |
+| `llm.model` | Model name (engine `http` only) |
 | `llm.systemPrompt` | Bot personality/instructions |
 | `bot.maxHistoryPerChat` | Messages to keep for context |
 | `bot.cooldownSeconds` | Min seconds between replies per chat |

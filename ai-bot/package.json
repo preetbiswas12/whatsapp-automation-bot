@@ -17,5 +17,8 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "node-llama-cpp": "^3.21.1"
+  }
 }

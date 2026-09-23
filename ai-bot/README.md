@@ -8,7 +8,7 @@ time someone says something similar — no approval needed.
 ## Architecture
 
 ```
-WhatsApp User → WAA Server → Webhook → AI Bot → LM Studio (local GGUF) → Draft
+WhatsApp User → WAA Server → Webhook → AI Bot → Local LLM (GGUF) → Draft
                                               │
                                               ▼
                                     Needs approval?
@@ -25,25 +25,46 @@ WhatsApp User → WAA Server → Webhook → AI Bot → LM Studio (local GGUF) �
           Learn pattern
 ```
 
-## Setup (3 steps)
+## Setup (no LM Studio required)
 
-### 1. Install LM Studio
-Download from https://lmstudio.ai (free).
+The bot loads your `.gguf` **in-process** via `node-llama-cpp` — there is no
+separate LLM server to run. One command starts everything.
 
-### 2. Load your GGUF model
-1. Open LM Studio
-2. Click "My Models" → drag & drop your `.gguf` file
-3. Click **Start Server** (bottom left)
-4. Note the port (default: 1234)
-5. In the server tab, copy the model name shown
-
-### 3. Configure the bot
-Edit `config.json` and set `llm.model` to the model name from LM Studio.
-
-## Run
+### 1. Install the model runtime
 
 ```bash
 cd ai-bot
+npm install          # installs node-llama-cpp (downloads llama.cpp binaries)
+```
+
+### 2. Point the bot at your GGUF file
+
+Edit `config.json`:
+
+```json
+"llm": {
+  "engine": "gguf",
+  "modelPath": "C:/path/to/your/model.gguf",
+  "contextSize": 2048,
+  "stripReasoning": true,
+  "maxTokens": 512
+}
+```
+
+- `engine: "gguf"` → run the model directly inside the bot process (default)
+- `engine: "http"` → talk to any OpenAI-compatible server (`llm.host`/`llm.model`,
+  e.g. LM Studio or llama-server)
+- `modelPath` can also be set with `WAA_LLM_MODEL_PATH`; if left empty, the bot
+  auto-discovers the largest `.gguf` in `models/`, your Downloads folder, etc.
+
+> **R1-style models** (like DeepSeek-R1-Distill): they "think" for many tokens
+> before answering. The bot strips the reasoning block automatically and the
+> system prompt tells the model to answer directly. `stripReasoning: true`
+> keeps only the final answer.
+
+### 3. Run
+
+```bash
 npm install   # (no deps, but keeps things tidy)
 npm start     # dev (single process)
 ```
@@ -73,8 +94,8 @@ Health check: `npm run health` → hits `GET /health` and exits non-zero when de
    export WAA_BOT_API_TOKEN="your-strong-token"
    ```
    Env vars override `config.json` for: `WAA_BOT_API_TOKEN`, `WAA_BOT_PORT`,
-   `WAA_BOT_LOG_LEVEL`, `WAA_BOT_LOG_FILE`, `WAA_HOST`, `WAA_LLM_HOST`,
-   `WAA_LLM_MODEL`.
+   `WAA_BOT_LOG_LEVEL`, `WAA_BOT_LOG_FILE`, `WAA_HOST`, `WAA_LLM_ENGINE`,
+   `WAA_LLM_MODEL_PATH`, `WAA_LLM_HOST`, `WAA_LLM_MODEL`.
 2. **Keep it alive** — `npm run start:prod` (built-in supervisor) or PM2.
 3. **Watch the health endpoint** — `GET /health` returns:
    - `200 ok` — WAA reachable, LLM reachable, webhook registered
@@ -129,7 +150,7 @@ ai-bot/
     ├── utils.js            # sleep, atomic JSON writes, retry w/ backoff
     ├── matcher.js          # Keyword extraction + Jaccard similarity
     ├── guards.js           # Cooldown + dedup trackers
-    ├── llm.js              # LM Studio client (timeouts + retries)
+    ├── llm.js              # LLM client: in-process GGUF (node-llama-cpp) or HTTP
     ├── waa.js              # WAA server client (timeouts + retries, webhook state)
     ├── health.js           # Dependency health report
     ├── processor.js        # Incoming-message pipeline
@@ -161,10 +182,14 @@ ai-bot/
 | `waa.host` | `http://localhost:2785` | WAA server URL |
 | `waa.apiKey` | `dev-admin-key` | Your API key |
 | `waa.sessionId` | *(yours)* | WhatsApp session ID |
-| `llm.host` | `http://localhost:1234` | LM Studio URL |
-| `llm.model` | *(set it)* | Model name (must match LM Studio) |
+| `llm.engine` | `gguf` | `gguf` = run the model in-process; `http` = OpenAI-compatible server |
+| `llm.host` | `http://localhost:1234` | LLM server URL (engine `http` only) |
+| `llm.model` | *(set it)* | Model name (engine `http`; display label for `gguf`) |
+| `llm.modelPath` | *(auto-discovered)* | Path to your `.gguf` file (engine `gguf`) |
+| `llm.contextSize` | `2048` | Context window for the in-process model |
+| `llm.stripReasoning` | `true` | Strip R1-style thinking blocks from replies |
 | `llm.systemPrompt` | built-in | System prompt for the AI |
-| `llm.maxTokens` | `1024` | Max response length |
+| `llm.maxTokens` | `512` | Max response length |
 | `llm.temperature` | `0.7` | Response creativity (0-1) |
 | `llm.timeoutSeconds` | `120` | LLM request timeout (LLMs can be slow on CPU) |
 | `llm.maxRetries` | `3` | Retries for LLM 5xx/429/network errors |

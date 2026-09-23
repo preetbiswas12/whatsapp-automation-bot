@@ -1,18 +1,15 @@
 #!/usr/bin/env node
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  Setup script — verifies config, checks LM Studio, registers webhook
+//  Setup script — verifies config, checks the LLM engine, registers webhook
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const fs = require('fs');
-const path = require('path');
-
-const CONFIG_PATH = path.join(__dirname, 'config.json');
-const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+const { config } = require('./src/config');
 
 async function check(name, fn) {
   try {
-    const ok = await fn();
-    console.log(`  ✅ ${name}`);
-    return ok;
+    const note = await fn();
+    console.log(`  ✅ ${name}${note ? ` — ${note}` : ''}`);
+    return true;
   } catch (err) {
     console.log(`  ❌ ${name}: ${err.message}`);
     return false;
@@ -26,14 +23,21 @@ async function main() {
 
   let allOk = true;
 
-  // 1. Check WAA server
+  // 1. Config
+  allOk &= await check('Config valid', () => {
+    if (!config.waa.apiKey) throw new Error('waa.apiKey missing');
+    if (!config.waa.sessionId) throw new Error('waa.sessionId missing');
+    return `engine=${config.llm.engine}, model=${config.llm.engine === 'gguf' ? (config.llm.model || config.llm.modelPath) : config.llm.model}`;
+  });
+
+  // 2. WAA server
   allOk &= await check('WAA server reachable', async () => {
     const res = await fetch(`${config.waa.host}/api/health`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return true;
   });
 
-  // 2. Check API key
+  // 3. API key
   allOk &= await check('API key works', async () => {
     const res = await fetch(`${config.waa.host}/api/sessions`, {
       headers: { 'x-api-key': config.waa.apiKey },
@@ -42,8 +46,8 @@ async function main() {
     return true;
   });
 
-  // 3. Check session exists
-  allOk &= await check('Session exists and is connected', async () => {
+  // 4. Session exists
+  allOk &= await check('Session connected', async () => {
     const res = await fetch(`${config.waa.host}/api/sessions/${config.waa.sessionId}`, {
       headers: { 'x-api-key': config.waa.apiKey },
     });
@@ -57,17 +61,31 @@ async function main() {
     return true;
   });
 
-  // 4. Check LM Studio
-  allOk &= await check('LM Studio reachable', async () => {
-    const res = await fetch(`${config.llm.host}/v1/models`);
-    if (!res.ok) throw new Error(`HTTP ${res.status} — Is LM Studio running?`);
-    const data = await res.json();
-    const models = data?.data || [];
-    console.log(`    📦 Available models: ${models.map(m => m.id).join(', ') || 'none'}`);
-    return true;
-  });
+  // 5. LLM engine
+  if (config.llm.engine === 'gguf') {
+    allOk &= await check('GGUF model file exists', () => {
+      if (!config.llm.modelPath) throw new Error('llm.modelPath not set');
+      if (!fs.existsSync(config.llm.modelPath)) {
+        throw new Error(`file not found: ${config.llm.modelPath}`);
+      }
+      const mb = Math.round(fs.statSync(config.llm.modelPath).size / 1024 / 1024);
+      return `${config.llm.modelPath} (${mb} MB)`;
+    });
+    allOk &= await check('node-llama-cpp installed', async () => {
+      await import('node-llama-cpp');
+      return true;
+    });
+  } else {
+    allOk &= await check('LLM HTTP server reachable', async () => {
+      const res = await fetch(`${config.llm.host}/v1/models`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} — is the server running?`);
+      const data = await res.json();
+      const models = (data?.data || []).map(m => m.id).join(', ') || 'none';
+      return `models: ${models}`;
+    });
+  }
 
-  // 5. Check webhook port available
+  // 6. Webhook port available
   allOk &= await check('Webhook port available', async () => {
     const res = await fetch(`http://localhost:${config.webhook.port}/health`).catch(() => null);
     if (res && res.ok) {

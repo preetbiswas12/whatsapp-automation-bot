@@ -6,6 +6,7 @@
 const path = require('path');
 const config = require('./config').config;
 const waa = require('./waa');
+const llm = require('./llm');
 const { readJsonFile } = require('./utils');
 
 const VERSION = (() => {
@@ -36,6 +37,21 @@ async function checkWaa() {
 }
 
 async function checkLlm() {
+  if (config.llm.engine === 'gguf') {
+    const status = llm.getModelStatus();
+    return {
+      ok: status.loaded,
+      engine: 'gguf',
+      modelPath: status.modelPath,
+      contextSize: status.contextSize,
+      configuredModel: config.llm.model || '(display name)',
+      error: status.error || null,
+      loadMs: status.loadMs ?? null,
+      lastInferenceMs: status.lastInferenceMs ?? null,
+      estTokensPerSec: status.estTokensPerSec ?? null,
+    };
+  }
+
   const started = Date.now();
   try {
     const res = await fetch(`${config.llm.host}/v1/models`, {
@@ -45,6 +61,7 @@ async function checkLlm() {
     const models = (data.data || []).map(m => m.id);
     return {
       ok: res.ok,
+      engine: 'http',
       latencyMs: Date.now() - started,
       httpStatus: res.status,
       models: models.slice(0, 10),

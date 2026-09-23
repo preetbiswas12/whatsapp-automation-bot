@@ -29,6 +29,7 @@ const logger = require('./src/logger');
 const { log, banner } = logger;
 const waa = require('./src/waa');
 const server = require('./src/server');
+const llm = require('./src/llm');
 const patternStore = require('./src/store/patterns');
 const approvalStore = require('./src/store/approvals');
 
@@ -63,7 +64,7 @@ async function main() {
     '🤖 WAA AI Bot — Approval-Based Learning System',
     '',
     `📡 WAA:           ${config.waa.host}`,
-    `🧠 LLM:           ${config.llm.host} (${config.llm.model})`,
+    `🧠 LLM engine:    ${config.llm.engine === 'gguf' ? `GGUF in-process (${config.llm.modelPath})` : `HTTP (${config.llm.host} / ${config.llm.model})`}`,
     `🔗 Webhook:       http://localhost:${config.webhook.port}${config.webhook.path}`,
     `📊 Dashboard:     http://localhost:${config.webhook.port}/`,
     `💬 Session:       ${config.waa.sessionId}`,
@@ -77,6 +78,17 @@ async function main() {
 
   // ── Start HTTP server ───────────────────────────────────────────────────────
   const httpServer = server.startServer();
+
+  // ── Load the local GGUF model (in-process) ──────────────────────────────────
+  // Warm it up so the first incoming message isn't slowed by model loading.
+  // If it fails, the bot still starts and /health reports the problem.
+  if (config.llm.engine === 'gguf') {
+    try {
+      await llm.initGguf();
+    } catch (err) {
+      log.error('LLM', `Failed to preload GGUF model: ${err.message}`);
+    }
+  }
 
   // ── Register webhook with WAA ───────────────────────────────────────────────
   await waa.registerWebhook();
