@@ -81,6 +81,10 @@ npm run start:prod     # supervisor: auto-restarts bot.js on crash
 npx pm2 start ecosystem.config.js && npx pm2 save
 ```
 
+> **One-command option:** from the repo root (`OpenWA`), `npm run start:prod`
+> boots the **WAA server + this bot inside a single process** (see `run-all.js`).
+> Use that if you want everything to start and stop together.
+
 Health check: `npm run health` → hits `GET /health` and exits non-zero when degraded.
 
 ### Production checklist

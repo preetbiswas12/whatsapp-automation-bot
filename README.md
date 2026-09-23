@@ -136,12 +136,23 @@ Edit `config.json`:
 }
 ```
 
-### Step 5: Start the Bot
+### Step 5: Start Everything (one command, one server)
 
 ```bash
-npm start              # single process (dev)
-npm run start:prod     # supervisor with auto-restart (production)
+npm run build:all     # build WAA server + dashboard (only needed once / after changes)
+npm run start:prod    # ✨ boots WAA server + AI bot (with your GGUF) in ONE process
 ```
+
+That's it. Both run inside a single server process:
+
+| What | URL |
+|---|---|
+| WAA dashboard (sessions/QR) | http://localhost:2785 |
+| Approval dashboard | http://localhost:3001/ |
+| Bot health check | http://localhost:3001/health |
+
+Ctrl+C stops both together. Still want them separate? `npm run start:server`
+starts only the WAA server; then boot the bot from `ai-bot/` as before.
 
 Send a message to your WhatsApp number — the bot drafts a reply!
 Open **http://localhost:3001/** to **approve** drafts — every approved reply is
