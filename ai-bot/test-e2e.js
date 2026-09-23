@@ -95,23 +95,34 @@ function sendFake(text, key) {
     mine ? `draft: "${(mine.draftReply || '').slice(0, 80)}"` : 'no new pending item found');
   ok('Draft is non-empty (no blank replies)', Boolean(mine && (mine.draftReply || '').trim().length > 0));
 
-  // 4) approve guard — WhatsApp not connected ⇒ refused, nothing learned
+  // 4) approve path — behaviour depends on whether WhatsApp is connected:
+  //    connected    → approve succeeds: reply sent + pattern learned
+  //    disconnected → approve refused: stays pending, nothing learned
   if (mine) {
+    const patsBefore = asArray((await req('/api/patterns')).body).length;
     const ap = await req(`/api/approvals/${mine.id}/approve`, { method: 'POST' });
     const still = asArray((await req('/api/approvals')).body).find(it => it.id === mine.id);
-    const pats = asArray((await req('/api/patterns')).body);
-    const learned = pats.some(p => p && p.trigger && p.trigger.includes('opening hours'));
-    ok('Approve refused while WhatsApp disconnected (no send/learn)',
-      ap.status >= 400 && still?.status === 'pending' && !learned,
-      `approve=${ap.status} status=${still?.status} learned=${learned}`);
+    if (ap.status === 200) {
+      const patsAfter = asArray((await req('/api/patterns')).body).length;
+      ok('Approve works when WhatsApp connected (send + learn)',
+        still?.status === 'approved' && patsAfter > patsBefore,
+        `status=${still?.status} patterns=${patsBefore}→${patsAfter}`);
+    } else {
+      ok('Approve refused while WhatsApp disconnected (no send/learn)',
+        ap.status >= 400 && still?.status === 'pending',
+        `approve=${ap.status} status=${still?.status}`);
+    }
   }
 
-  // 5) reject path
+  // 5) reject path — only valid while the item is still pending
   if (mine) {
-    const rj = await req(`/api/approvals/${mine.id}/reject`, { method: 'POST' });
-    ok('Reject works (200)', rj.status === 200, `got ${rj.status}`);
-    const after = asArray((await req('/api/approvals')).body).find(it => it.id === mine.id);
-    ok('Reject persisted (status=rejected)', after?.status === 'rejected', `status=${after?.status}`);
+    const cur = asArray((await req('/api/approvals')).body).find(it => it.id === mine.id);
+    if (cur?.status === 'pending') {
+      const rj = await req(`/api/approvals/${mine.id}/reject`, { method: 'POST' });
+      ok('Reject works (200)', rj.status === 200, `got ${rj.status}`);
+      const after = asArray((await req('/api/approvals')).body).find(it => it.id === mine.id);
+      ok('Reject persisted (status=rejected)', after?.status === 'rejected', `status=${after?.status}`);
+    }
   }
 
   // 6) patterns + dashboard

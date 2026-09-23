@@ -35,6 +35,10 @@ async function processMessage(payload) {
   // Filters
   if (config.bot.ignoreFromMe && msg.fromMe) return;
   if (config.bot.ignoreGroups && isGroup) return;
+  if (config.bot.ignoreNewsletterChats && (chatId.endsWith('@newsletter') || chatId.endsWith('@broadcast'))) {
+    log('BOT', 'Ignoring channel/newsletter message', { chatId });
+    return;
+  }
   if (!chatId || !text) {
     log('BOT', 'Ignoring message without chatId or text', { chatId, hasText: Boolean(text) });
     return;

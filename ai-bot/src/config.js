@@ -22,7 +22,7 @@ const DEFAULTS = {
     host: 'http://localhost:1234',
     model: '',
     modelPath: '',
-    contextSize: 2048,   // keep the KV cache small for low-RAM machines
+    contextSize: 8192,   // KV-cache: ~57KB/token on this model — 8192 ≈ +470MB (safe on 6GB RAM)
     stripReasoning: true,
     systemPrompt: 'You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. ALWAYS reply in English, no matter what language the incoming message is in.',
     maxTokens: 512,
@@ -35,6 +35,7 @@ const DEFAULTS = {
     replyDelay: 1500,
     ignoreFromMe: true,
     ignoreGroups: false,
+    ignoreNewsletterChats: true,
     replyInGroupsOnlyWhenMentioned: true,
     maxHistoryPerChat: 20,
     cooldownSeconds: 5,
