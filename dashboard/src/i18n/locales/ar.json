@@ -62,6 +62,8 @@
     "templates": "Templates",
     "apiKeys": "مفاتيح API",
     "messageTester": "اختبار الرسائل",
+
+    "ai": "موافقات الذكاء الاصطناعي",
     "infrastructure": "البنية التحتية",
     "plugins": "الإضافات",
     "logs": "السجلات"
@@ -1032,5 +1034,69 @@
       "current": "هذه الجلسة"
     },
     "loading": "جارٍ البحث…"
+  },
+  "ai": {
+    "title": "موافقات الذكاء الاصطناعي",
+    "subtitle": "راجع الردود التي ينشئها الذكاء الاصطناعي قبل إرسالها. لن يُرسل شيء دون موافقتك.",
+    "loadError": "تعذّر تحميل حالة مساعد الذكاء الاصطناعي.",
+    "status": {
+      "enabled": "الذكاء الاصطناعي مفعّل",
+      "disabled": "الذكاء الاصطناعي معطّل",
+      "approvalGate": "بوابة الموافقة مفعّلة",
+      "approvalOff": "بوابة الموافقة معطّلة",
+      "reachable": "LLM متاح",
+      "unreachable": "LLM غير متاح",
+      "pendingCount": "{{count}} معلّقة",
+      "patternCount": "{{count}} نمط"
+    },
+    "tabs": {
+      "pending": "معلّقة",
+      "resolved": "تم حلها",
+      "patterns": "الأنماط"
+    },
+    "kind": {
+      "pattern": "نمط",
+      "draft": "مسودة",
+      "match": "تطابق"
+    },
+    "card": {
+      "original": "الرسالة الواردة",
+      "draft": "مسودة الرد",
+      "summary": "الملخص"
+    },
+    "actions": {
+      "approve": "موافقة وإرسال",
+      "reject": "رفض",
+      "deletePattern": "حذف النمط"
+    },
+    "empty": {
+      "pendingTitle": "لا موافقات معلّقة",
+      "pendingDescription": "عندما تثير رسالة واردة ردًا، يظهر هنا لمراجعتك.",
+      "resolvedTitle": "لا عناصر محلولة",
+      "resolvedDescription": "ستظهر المسودات المعتمدة والمرفوضة هنا.",
+      "patternsTitle": "لا أنماط مكتسبة",
+      "patternsDescription": "تُحفظ الردود المعتمدة كأنماط قابلة لإعادة الاستخدام."
+    },
+    "resolved": {
+      "pending": "معلّقة",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض",
+      "expired": "منتهية"
+    },
+    "patterns": {
+      "uses": "{{count}} استخدامات",
+      "keywords": "المحفزات",
+      "reply": "الرد",
+      "deleteTitle": "حذف النمط",
+      "deleteConfirm": "لن يثير هذا النمط ردود مسودة تلقائية بعد الآن."
+    },
+    "toasts": {
+      "approved": "تمت الموافقة على الرد وإرساله",
+      "approveFailed": "فشل الموافقة: {{message}}",
+      "rejected": "تم رفض الرد",
+      "rejectFailed": "فشل الرفض: {{message}}",
+      "patternDeleted": "تم حذف النمط",
+      "patternDeleteFailed": "فشل حذف النمط: {{message}}"
+    }
   }
 }

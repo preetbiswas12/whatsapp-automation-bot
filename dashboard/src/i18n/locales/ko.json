@@ -62,6 +62,8 @@
     "templates": "템플릿",
     "apiKeys": "API 키",
     "messageTester": "메시지 테스터",
+
+    "ai": "AI 승인",
     "infrastructure": "인프라",
     "plugins": "플러그인",
     "logs": "로그"
@@ -1017,5 +1019,69 @@
       "current": "현재 세션"
     },
     "loading": "검색하는 중…"
+  },
+  "ai": {
+    "title": "AI 승인",
+    "subtitle": "AI가 생성한 답변을 보내기 전에 검토하세요. 승인 없이 보내지지 않습니다.",
+    "loadError": "AI 어시스턴트 상태를 불러오지 못했습니다.",
+    "status": {
+      "enabled": "AI 활성화",
+      "disabled": "AI 비활성화",
+      "approvalGate": "승인 게이트 켜짐",
+      "approvalOff": "승인 게이트 꺼짐",
+      "reachable": "LLM 연결 가능",
+      "unreachable": "LLM 연결 불가",
+      "pendingCount": "{{count}}건 대기",
+      "patternCount": "{{count}}개 패턴"
+    },
+    "tabs": {
+      "pending": "대기 중",
+      "resolved": "처리됨",
+      "patterns": "패턴"
+    },
+    "kind": {
+      "pattern": "패턴",
+      "draft": "초안",
+      "match": "일치"
+    },
+    "card": {
+      "original": "수신 메시지",
+      "draft": "초안 답변",
+      "summary": "요약"
+    },
+    "actions": {
+      "approve": "승인 및 전송",
+      "reject": "거부",
+      "deletePattern": "패턴 삭제"
+    },
+    "empty": {
+      "pendingTitle": "대기 중인 승인이 없습니다",
+      "pendingDescription": "수신 메시지가 답변을 유발하면 여기에 표시됩니다.",
+      "resolvedTitle": "처리된 항목이 없습니다",
+      "resolvedDescription": "승인되거나 거부된 초안이 여기에 표시됩니다.",
+      "patternsTitle": "학습된 패턴이 없습니다",
+      "patternsDescription": "승인된 답변은 재사용 가능한 패턴으로 저장됩니다."
+    },
+    "resolved": {
+      "pending": "대기 중",
+      "approved": "승인됨",
+      "rejected": "거부됨",
+      "expired": "만료됨"
+    },
+    "patterns": {
+      "uses": "{{count}}회 사용",
+      "keywords": "트리거",
+      "reply": "답변",
+      "deleteTitle": "패턴 삭제",
+      "deleteConfirm": "이 패턴은 더 이상 자동 초안 답변을 유발하지 않습니다."
+    },
+    "toasts": {
+      "approved": "답변이 승인되어 전송되었습니다",
+      "approveFailed": "승인 실패: {{message}}",
+      "rejected": "답변이 거부되었습니다",
+      "rejectFailed": "거부 실패: {{message}}",
+      "patternDeleted": "패턴이 삭제되었습니다",
+      "patternDeleteFailed": "패턴 삭제 실패: {{message}}"
+    }
   }
 }

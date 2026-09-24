@@ -61,6 +61,8 @@
     "webhooks": "Webhooks",
     "apiKeys": "Chaves API",
     "messageTester": "Testador de mensagens",
+
+    "ai": "Aprovações de IA",
     "infrastructure": "Infraestrutura",
     "plugins": "Plugins",
     "logs": "Registros",
@@ -1017,5 +1019,69 @@
       "current": "Esta sessão"
     },
     "loading": "Pesquisando…"
+  },
+  "ai": {
+    "title": "Aprovações de IA",
+    "subtitle": "Revise as respostas geradas por IA antes do envio. Nada sai sem a sua aprovação.",
+    "loadError": "Falha ao carregar o status do assistente de IA.",
+    "status": {
+      "enabled": "IA habilitada",
+      "disabled": "IA desabilitada",
+      "approvalGate": "Portão de aprovação ativado",
+      "approvalOff": "Portão de aprovação desativado",
+      "reachable": "LLM acessível",
+      "unreachable": "LLM inacessível",
+      "pendingCount": "{{count}} pendentes",
+      "patternCount": "{{count}} padrões"
+    },
+    "tabs": {
+      "pending": "Pendentes",
+      "resolved": "Resolvidos",
+      "patterns": "Padrões"
+    },
+    "kind": {
+      "pattern": "Padrão",
+      "draft": "Rascunho",
+      "match": "correspondência"
+    },
+    "card": {
+      "original": "Mensagem recebida",
+      "draft": "Rascunho de resposta",
+      "summary": "Resumo"
+    },
+    "actions": {
+      "approve": "Aprovar e enviar",
+      "reject": "Rejeitar",
+      "deletePattern": "Excluir padrão"
+    },
+    "empty": {
+      "pendingTitle": "Nenhuma aprovação pendente",
+      "pendingDescription": "Quando uma mensagem recebida gera uma resposta, ela aparece aqui para revisão.",
+      "resolvedTitle": "Nenhum item resolvido",
+      "resolvedDescription": "Os rascunhos aprovados e rejeitados aparecerão aqui.",
+      "patternsTitle": "Nenhum padrão aprendido",
+      "patternsDescription": "Respostas aprovadas são salvas como padrões reutilizáveis."
+    },
+    "resolved": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "expired": "Expirado"
+    },
+    "patterns": {
+      "uses": "{{count}} usos",
+      "keywords": "Gatilhos",
+      "reply": "Resposta",
+      "deleteTitle": "Excluir padrão",
+      "deleteConfirm": "Este padrão não gerará mais rascunhos de resposta automáticos."
+    },
+    "toasts": {
+      "approved": "Resposta aprovada e enviada",
+      "approveFailed": "Falha ao aprovar: {{message}}",
+      "rejected": "Resposta rejeitada",
+      "rejectFailed": "Falha ao rejeitar: {{message}}",
+      "patternDeleted": "Padrão excluído",
+      "patternDeleteFailed": "Falha ao excluir o padrão: {{message}}"
+    }
   }
 }

@@ -61,6 +61,8 @@
     "webhooks": "Webhooks",
     "apiKeys": "Claves API",
     "messageTester": "Probador de mensajes",
+
+    "ai": "Aprobaciones IA",
     "infrastructure": "Infraestructura",
     "plugins": "Plugins",
     "logs": "Registros",
@@ -1017,5 +1019,69 @@
       "current": "Esta sesión"
     },
     "loading": "Buscando…"
+  },
+  "ai": {
+    "title": "Aprobaciones IA",
+    "subtitle": "Revisa las respuestas generadas por IA antes de enviarlas. Nada sale sin tu aprobación.",
+    "loadError": "No se pudo cargar el estado del asistente de IA.",
+    "status": {
+      "enabled": "IA habilitada",
+      "disabled": "IA deshabilitada",
+      "approvalGate": "Compuerta de aprobación activa",
+      "approvalOff": "Compuerta de aprobación desactivada",
+      "reachable": "LLM accesible",
+      "unreachable": "LLM inaccesible",
+      "pendingCount": "{{count}} pendientes",
+      "patternCount": "{{count}} patrones"
+    },
+    "tabs": {
+      "pending": "Pendientes",
+      "resolved": "Resueltos",
+      "patterns": "Patrones"
+    },
+    "kind": {
+      "pattern": "Patrón",
+      "draft": "Borrador",
+      "match": "coincidencia"
+    },
+    "card": {
+      "original": "Mensaje entrante",
+      "draft": "Borrador de respuesta",
+      "summary": "Resumen"
+    },
+    "actions": {
+      "approve": "Aprobar y enviar",
+      "reject": "Rechazar",
+      "deletePattern": "Eliminar patrón"
+    },
+    "empty": {
+      "pendingTitle": "Sin aprobaciones pendientes",
+      "pendingDescription": "Cuando un mensaje entrante genera una respuesta, aparece aquí para tu revisión.",
+      "resolvedTitle": "Sin elementos resueltos",
+      "resolvedDescription": "Los borradores aprobados y rechazados aparecerán aquí.",
+      "patternsTitle": "Sin patrones aprendidos",
+      "patternsDescription": "Las respuestas aprobadas se guardan como patrones reutilizables."
+    },
+    "resolved": {
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
+      "expired": "Expirado"
+    },
+    "patterns": {
+      "uses": "{{count}} usos",
+      "keywords": "Disparadores",
+      "reply": "Respuesta",
+      "deleteTitle": "Eliminar patrón",
+      "deleteConfirm": "Este patrón ya no generará borradores de respuesta automáticos."
+    },
+    "toasts": {
+      "approved": "Respuesta aprobada y enviada",
+      "approveFailed": "No se pudo aprobar: {{message}}",
+      "rejected": "Respuesta rechazada",
+      "rejectFailed": "No se pudo rechazar: {{message}}",
+      "patternDeleted": "Patrón eliminado",
+      "patternDeleteFailed": "No se pudo eliminar el patrón: {{message}}"
+    }
   }
 }

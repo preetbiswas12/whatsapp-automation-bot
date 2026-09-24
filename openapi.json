@@ -2262,6 +2262,229 @@
         ]
       }
     },
+    "/api/ai/status": {
+      "get": {
+        "operationId": "AiController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "AI module status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModuleStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "AI assistant status: gate config, LLM reachability, queue shape",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/approvals": {
+      "get": {
+        "operationId": "AiController_listApprovals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Approval queue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiApprovalItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List all approvals, newest first (pending and resolved)",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/approvals/pending": {
+      "get": {
+        "operationId": "AiController_listPending",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Pending approvals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiApprovalItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List pending approvals, newest first",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/approvals/resolved": {
+      "get": {
+        "operationId": "AiController_listResolved",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resolved approvals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiApprovalItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List resolved approvals (approved / rejected / expired)",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/approvals/{id}/approve": {
+      "post": {
+        "operationId": "AiController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reply sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiApprovalItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such approval."
+          },
+          "409": {
+            "description": "Approval already resolved."
+          }
+        },
+        "summary": "Approve an AI draft: send the reply and learn the pattern",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/approvals/{id}/reject": {
+      "post": {
+        "operationId": "AiController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Draft rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiApprovalItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such approval."
+          },
+          "409": {
+            "description": "Approval already resolved."
+          }
+        },
+        "summary": "Reject an AI draft: discard without sending",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/patterns": {
+      "get": {
+        "operationId": "AiController_listPatterns",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Learned patterns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiPatternDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List learned reply patterns",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/ai/patterns/{id}": {
+      "delete": {
+        "operationId": "AiController_deletePattern",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Pattern deleted."
+          },
+          "404": {
+            "description": "No such pattern."
+          }
+        },
+        "summary": "Delete a learned pattern",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/api/sessions/{sessionId}/messages": {
       "get": {
         "operationId": "MessageController_getMessages",
@@ -9659,7 +9882,7 @@
   "info": {
     "title": "OpenWA API",
     "description": "Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API\n\n**Gateway-wide responses.** Two statuses are returned by middleware before routing, so any operation can emit them:\n\n- `415 Unsupported Media Type` — the request body carries a `Content-Encoding` other than `identity`. The aggregate in-flight body cap counts wire bytes, so a compressed body would be admitted on its compressed size and then inflated past the memory it is meant to bound. Send the body uncompressed.\n- `503 Service Unavailable` with `Retry-After` — the gateway already has too much request body data in flight. The body is not read; retry after the given delay.",
-    "version": "0.23.5",
+    "version": "1.0.0",
     "contact": {
       "name": "OpenWA",
       "url": "https://github.com/rmyndharis/OpenWA",
@@ -11426,6 +11649,182 @@
             "description": "Whether the rule is active"
           }
         }
+      },
+      "AiModuleStatusDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the AI bot is enabled"
+          },
+          "approvalEnabled": {
+            "type": "boolean",
+            "description": "Whether the human approval gate is enforced"
+          },
+          "matchThreshold": {
+            "type": "number",
+            "description": "Pattern match threshold (0..1)"
+          },
+          "llmReachable": {
+            "type": "boolean",
+            "description": "Whether the LLM endpoint was reachable at last probe"
+          },
+          "llmModel": {
+            "type": "string",
+            "description": "Configured LLM model id"
+          },
+          "pendingApprovals": {
+            "type": "number",
+            "description": "Number of drafts awaiting approval"
+          },
+          "patternCount": {
+            "type": "number",
+            "description": "Number of learned patterns"
+          }
+        },
+        "required": [
+          "enabled",
+          "approvalEnabled",
+          "matchThreshold",
+          "llmReachable",
+          "llmModel",
+          "pendingApprovals",
+          "patternCount"
+        ]
+      },
+      "AiApprovalItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Approval id (uuid)"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Session the inbound message arrived on"
+          },
+          "sender": {
+            "type": "string",
+            "description": "Sender of the original message (push name or contact id)"
+          },
+          "chatId": {
+            "type": "string",
+            "description": "Chat the reply belongs to"
+          },
+          "originalMessage": {
+            "type": "string",
+            "description": "The inbound message that produced the draft"
+          },
+          "draftReply": {
+            "type": "string",
+            "description": "The drafted reply awaiting approval"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short summary of the conversation context"
+          },
+          "chatSummary": {
+            "type": "string",
+            "description": "Running conversation summary for this chat"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired"
+            ],
+            "description": "Approval state"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pattern"
+            ],
+            "description": "Draft origin: fresh LLM draft or pattern match"
+          },
+          "patternId": {
+            "type": "string",
+            "description": "Pattern id, present only for pattern-match drafts"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Pattern match confidence (0..1), pattern drafts only"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the draft was queued (ISO 8601)"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "description": "When the draft was resolved (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "sender",
+          "chatId",
+          "originalMessage",
+          "draftReply",
+          "summary",
+          "chatSummary",
+          "status",
+          "kind",
+          "createdAt"
+        ]
+      },
+      "AiPatternDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Pattern id (uuid)"
+          },
+          "keywords": {
+            "description": "Trigger keywords learned from the approved message",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "originalMessage": {
+            "type": "string",
+            "description": "The original message the pattern came from"
+          },
+          "reply": {
+            "type": "string",
+            "description": "The reply the pattern produces"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short summary of what this pattern replies to"
+          },
+          "uses": {
+            "type": "number",
+            "description": "How many times the pattern has been used"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the pattern was created (ISO 8601)"
+          },
+          "lastUsed": {
+            "type": "string",
+            "description": "When the pattern was last used (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "keywords",
+          "originalMessage",
+          "reply",
+          "summary",
+          "uses",
+          "createdAt",
+          "lastUsed"
+        ]
       },
       "MessageListItemDto": {
         "type": "object",

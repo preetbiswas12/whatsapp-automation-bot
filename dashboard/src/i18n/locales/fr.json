@@ -62,6 +62,8 @@
     "templates": "Templates",
     "apiKeys": "Clés API",
     "messageTester": "Testeur de messages",
+
+    "ai": "Approbations IA",
     "infrastructure": "Infrastructure",
     "plugins": "Plugins",
     "logs": "Journaux"
@@ -1017,5 +1019,69 @@
       "current": "Cette session"
     },
     "loading": "Recherche…"
+  },
+  "ai": {
+    "title": "Approbations IA",
+    "subtitle": "Vérifiez les réponses générées par l’IA avant l’envoi. Rien ne part sans votre approbation.",
+    "loadError": "Impossible de charger l’état de l’assistant IA.",
+    "status": {
+      "enabled": "IA activée",
+      "disabled": "IA désactivée",
+      "approvalGate": "Porte d’approbation active",
+      "approvalOff": "Porte d’approbation inactive",
+      "reachable": "LLM joignable",
+      "unreachable": "LLM injoignable",
+      "pendingCount": "{{count}} en attente",
+      "patternCount": "{{count}} modèles"
+    },
+    "tabs": {
+      "pending": "En attente",
+      "resolved": "Résolus",
+      "patterns": "Modèles"
+    },
+    "kind": {
+      "pattern": "Modèle",
+      "draft": "Brouillon",
+      "match": "correspondance"
+    },
+    "card": {
+      "original": "Message entrant",
+      "draft": "Réponse brouillon",
+      "summary": "Résumé"
+    },
+    "actions": {
+      "approve": "Approuver et envoyer",
+      "reject": "Rejeter",
+      "deletePattern": "Supprimer le modèle"
+    },
+    "empty": {
+      "pendingTitle": "Aucune approbation en attente",
+      "pendingDescription": "Lorsqu’un message entrant déclenche une réponse, elle apparaît ici pour vérification.",
+      "resolvedTitle": "Aucun élément résolu",
+      "resolvedDescription": "Les brouillons approuvés et rejetés apparaîtront ici.",
+      "patternsTitle": "Aucun modèle appris",
+      "patternsDescription": "Les réponses approuvées sont mémorisées comme modèles réutilisables."
+    },
+    "resolved": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "expired": "Expiré"
+    },
+    "patterns": {
+      "uses": "{{count}} utilisations",
+      "keywords": "Déclencheurs",
+      "reply": "Réponse",
+      "deleteTitle": "Supprimer le modèle",
+      "deleteConfirm": "Ce modèle ne déclenchera plus de brouillons de réponse automatiques."
+    },
+    "toasts": {
+      "approved": "Réponse approuvée et envoyée",
+      "approveFailed": "Échec de l’approbation : {{message}}",
+      "rejected": "Réponse rejetée",
+      "rejectFailed": "Échec du rejet : {{message}}",
+      "patternDeleted": "Modèle supprimé",
+      "patternDeleteFailed": "Échec de la suppression du modèle : {{message}}"
+    }
   }
 }

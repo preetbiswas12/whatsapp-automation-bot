@@ -10,7 +10,7 @@
 <p align="center">
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
-  <a href="#-ai-bot-setup">AI Bot</a> •
+  <a href="#-ai-assistant">AI Assistant</a> •
   <a href="#-how-it-works">How It Works</a>
 </p>
 
@@ -18,19 +18,19 @@
 
 ## ✨ What is WAA?
 
-**WAA (WhatsApp Automation)** is a self-hosted WhatsApp bot that automatically replies to messages using a local AI model (no paid APIs). It learns from your past conversations to improve reply accuracy over time.
+**WAA (WhatsApp Automation)** is a self-hosted WhatsApp bot that automatically drafts replies to messages using a cloud LLM (kilo.ai). It learns from your past conversations to improve reply accuracy over time — and with the approval gate on (the default), nothing is ever sent without a human pressing **Approve** in the dashboard.
 
 ### Key Capabilities
 
 | Capability | Description |
 |---|---|
-| 🤖 **Auto-Reply** | Responds to incoming WhatsApp messages automatically using a local LLM |
+| 🤖 **Auto-Reply** | Drafts replies to incoming WhatsApp messages via a cloud LLM |
 | 🧠 **Self-Training** | Reads past conversation history to build context and improve reply quality |
+| ✅ **Human Approval** | Every draft waits in the approvals queue until an operator approves it (default on) |
 | 👥 **Group Support** | Replies when @mentioned in group chats |
 | 💬 **1-on-1 Chats** | Full conversation support in private chats |
 | 📊 **Conversation Memory** | Saves chat history as JSON per contact for context-aware replies |
-| 🔒 **Fully Local** | No API keys, no cloud LLMs — runs entirely on your machine |
-| 🎛️ **Dashboard** | Web UI to manage sessions, view messages, and monitor the bot |
+| 🎛️ **Single Dashboard** | One web UI to manage sessions, review/approve AI drafts, and monitor the bot |
 
 ---
 
@@ -40,29 +40,22 @@
 WhatsApp User
      │
      ▼
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Baileys   │────▶│  WAA Server  │────▶│  AI Bot (own │
-│  (WhatsApp  │     │  (Port 2785) │     │  GGUF, in-   │
-│  Connection)│     │              │     │  process LLM)│
-└─────────────┘     └──────┬───────┘     └──────────────┘
-                           │
-                    ┌──────▼───────┐
-                    │  AI Bot      │
-                    │  (Port 3001) │
-                    │              │
-                    │  Webhook →   │
-                    │  LLM → Reply │
-                    │  Save History│
-                    └──────────────┘
+┌─────────────┐     ┌──────────────────────────────────────────┐
+│   Baileys   │────▶│  OpenWA (Port 2785, one process)         │
+│  (WhatsApp  │     │  ┌────────────────────────────────────┐  │
+│  Connection)│     │  │ NestJS server + dashboard          │  │
+└─────────────┘     │  │ AI assistant (kilo.ai cloud LLM)   │  │
+                    │  │ Approval queue (human-in-the-loop) │  │
+                    │  └────────────────────────────────────┘  │
+                    └──────────────────────────────────────────┘
 ```
 
 **Flow:**
 1. WhatsApp message arrives → Baileys receives it
-2. WAA webhook triggers the AI bot
-3. Bot loads conversation history for that chat
-4. Sends context + message to the local LLM (GGUF loaded in-process — no external server)
-5. LLM generates reply → sent back via WAA API
-6. Conversation saved to JSON for future context
+2. The AI assistant checks learned patterns, then sends context + message to the cloud LLM (kilo.ai)
+3. LLM generates a draft reply
+4. The draft lands in the **approvals queue** — nothing is sent until an operator approves it from the dashboard
+5. Approved replies are saved as learned patterns for future context
 
 ---
 
@@ -71,7 +64,7 @@ WhatsApp User
 ### Prerequisites
 
 - **Node.js 22+** ([download](https://nodejs.org))
-- A **GGUF model file** (e.g. a DeepSeek-R1-Distill Q4/Q6 `.gguf` you downloaded)
+- A **kilo.ai API key (JWT)** — set it as `AI_LLM_API_KEY` in `.env` (see [Configuration](#-configuration))
 - A **dedicated WhatsApp number** (not your personal number)
 
 ### Step 1: Install & Start WAA Server
@@ -92,75 +85,40 @@ Dashboard available at: **http://localhost:2785**
 4. Scan the QR code with WhatsApp on your phone
 5. Wait for "Connected" status
 
-### Step 3: Point the Bot at Your GGUF (no LM Studio)
+### Step 3: Configure the AI Assistant
 
-The bot loads your `.gguf` **inside its own process** — no separate LLM server
-to run or configure.
-
-1. Download a model (e.g., **DeepSeek R1 Distill 1.5B GGUF** — runs on CPU)
-2. Set its path in `config.json` (see below)
-3. Check setup with `cd ai-bot && npm run setup` — it verifies the model file
-   and everything else
-
-### Step 4: Configure the AI Bot
+The assistant is built into OpenWA — no separate bot process or local model server.
+Information is set in `.env` (see [Configuration](#-configuration)); the essentials:
 
 ```bash
-cd ai-bot
-npm install
+# .env — AI assistant (kilo.ai cloud LLM + human-in-the-loop approval)
+AI_ENABLED=true              # master switch
+AI_APPROVAL_ENABLED=true     # require a human Approve before ANY reply is sent (default)
+AI_LLM_API_KEY=              # kilo.ai JWT bearer token (SECRET — never commit; .env only)
 ```
 
-Edit `config.json`:
-```json
-{
-  "waa": {
-    "host": "http://localhost:2785",
-    "apiKey": "dev-admin-key",
-    "sessionId": "<your-session-uuid>"
-  },
-  "llm": {
-    "engine": "gguf",
-    "modelPath": "C:/path/to/your/model.gguf",
-    "contextSize": 2048,
-    "stripReasoning": true,
-    "systemPrompt": "You are a helpful WhatsApp assistant. Answer directly and concisely. Do NOT write out any reasoning, thinking, or chain-of-thought; just give the final answer in one or two short sentences. Reply in the same language the user writes in.",
-    "maxTokens": 512,
-    "temperature": 0.7
-  },
-  "bot": {
-    "replyDelay": 1500,
-    "ignoreFromMe": true,
-    "ignoreGroups": false,
-    "maxHistoryPerChat": 20,
-    "cooldownSeconds": 5
-  }
-}
-```
+While `AI_APPROVAL_ENABLED=true`, every AI reply — even a learned-pattern match — waits in
+the approvals queue until you click **Approve** on the dashboard.
 
-### Step 5: Start Everything (one command, one server)
+### Step 4: Start Everything (one command, one server)
 
 ```bash
 npm run build:all     # build WAA server + dashboard (only needed once / after changes)
-npm run start:prod    # ✨ boots WAA server + AI bot (with your GGUF) in ONE process
+npm run start:prod    # ✨ boots OpenWA in ONE process
 ```
 
-That's it. Both run inside a single server process:
+That's it. One server, one dashboard:
 
 | What | URL |
 |---|---|
-| WAA dashboard (sessions/QR) | http://localhost:2785 |
-| Approval dashboard | http://localhost:3001/ |
-| Bot health check | http://localhost:3001/health |
+| OpenWA dashboard (sessions/QR, AI approvals) | http://localhost:2785 |
 
-Ctrl+C stops both together. Still want them separate? `npm run start:server`
-starts only the WAA server; then boot the bot from `ai-bot/` as before.
+Ctrl+C stops everything. Send a message to your WhatsApp number — the assistant drafts a
+reply! Open the **AI** page (or **http://localhost:2785/api/ai/approvals**) to **approve**
+drafts — every approved reply is saved as a learned pattern that auto-replies next time.
 
-Send a message to your WhatsApp number — the bot drafts a reply!
-Open **http://localhost:3001/** to **approve** drafts — every approved reply is
-saved as a learned pattern that auto-replies next time.
-
-> 💡 The approval API is protected by `X-Auth-Token`. Set a strong token in
-> production via the `WAA_BOT_API_TOKEN` environment variable (see
-> `ai-bot/README.md` → "Run in Production").
+> 🔒 The approval API is protected: all `/api/ai/*` routes require an **operator** API key
+> (see `x-api-key` / API Keys in the dashboard).
 
 ---
 
@@ -170,7 +128,7 @@ WAA doesn't train a model — it **builds context from your past conversations**
 
 ### Conversation History
 
-Every chat gets its own JSON file in `ai-bot/conversations/`:
+Every chat gets its own JSON file in `data/ai/conversations/`:
 
 ```json
 {
@@ -188,24 +146,23 @@ Every chat gets its own JSON file in `ai-bot/conversations/`:
 ### Context Window
 
 When a new message arrives:
-1. Bot loads the last **N messages** (configurable via `maxHistoryPerChat`)
-2. These are sent as conversation context to the LLM
-3. The LLM generates a reply that's aware of the full conversation
-4. New message + reply are appended to the history
+1. Assistant loads the last **N messages** (configurable via `AI_MAX_HISTORY_PER_CHAT`)
+2. These are sent as conversation context to the cloud LLM
+3. The LLM generates a draft reply that's aware of the full conversation
+4. You review/approve it from the dashboard; the message + reply are appended to the history
 
 ### Improving Accuracy Over Time
 
 | Method | How It Helps |
 |---|---|
 | **More conversation data** | The LLM gets better context as history grows |
-| **Custom system prompt** | Tailor the bot's personality and knowledge |
-| **Larger models** | Swap to bigger GGUF models as your hardware allows |
-| **Few-shot examples** | Add example Q&A pairs to the system prompt |
+| **Approved replies** | Every draft you approve becomes a learned pattern that answers instantly |
+| **Custom system prompt** | Tailor the assistant's personality via `AI_SYSTEM_PROMPT` |
 
 ### Group Chat Behavior
 
-- Bot only responds when **@mentioned** in groups (configurable)
-- Private chats get automatic replies
+- Assistant only responds when **@mentioned** in groups (configurable)
+- Private chats get automatic replies (pending approval)
 - Group context is maintained per-group chat ID
 
 ---
@@ -214,17 +171,12 @@ When a new message arrives:
 
 ```
 OpenWA/
-├── src/                    # WAA server (NestJS)
-├── dashboard/              # React web dashboard
-├── ai-bot/                 # AI auto-reply bot
-│   ├── bot.js              # Main bot script
-│   ├── config.json         # Bot configuration
-│   ├── setup.js            # Pre-flight checks
-│   ├── test-llm.js         # Quick LLM test
-│   └── conversations/      # Per-chat history (auto-created)
-├── data/                   # SQLite database
+├── src/                    # OpenWA server (NestJS)
+│   └── modules/ai/         # AI assistant: matcher, LLM client, approvals store, REST API
+├── dashboard/              # React web dashboard (sessions, messages, AI approvals)
+├── data/                   # SQLite database + AI state (approvals, patterns, conversations)
 ├── docs/                   # Documentation
-├── .env                    # Server configuration
+├── .env                    # Server configuration (incl. AI_LLM_API_KEY — never commit)
 ├── package.json            # Server dependencies
 └── README.md               # This file
 ```
@@ -241,21 +193,17 @@ OpenWA/
 | `PORT` | `2785` | Server port |
 | `DB_ENGINE` | `sqlite` | Database engine (`sqlite` or `postgres`) |
 | `CSP_UPGRADE_INSECURE_REQUESTS` | `false` | Set to `false` for local dev |
+| `AI_ENABLED` | `true` | AI assistant master switch |
+| `AI_APPROVAL_ENABLED` | `true` | Require a human Approve before any reply is sent |
+| `AI_MATCH_THRESHOLD` | `0.6` | Jaccard similarity at which a learned pattern matches |
+| `AI_LLM_HOST` | `https://api.kilo.ai/api/gateway` | Cloud LLM gateway |
+| `AI_LLM_MODEL` | `kilo-auto/free` | Cloud LLM model id |
+| `AI_LLM_API_KEY` | *(empty)* | kilo.ai JWT bearer token — **secret, .env only, never commit** |
+| `AI_MAX_HISTORY_PER_CHAT` | `20` | Per-chat turns kept for LLM context |
+| `AI_COOLDOWN_SECONDS` | `5` | Min seconds between replies per chat |
 
-### Bot Configuration (`ai-bot/config.json`)
-
-| Key | Description |
-|---|---|
-| `waa.host` | WAA server URL |
-| `waa.apiKey` | API authentication key |
-| `waa.sessionId` | WhatsApp session UUID |
-| `llm.engine` | `gguf` (in-process) or `http` (external server) |
-| `llm.modelPath` | Path to your `.gguf` (engine `gguf`) |
-| `llm.host` | LLM server URL (engine `http` only) |
-| `llm.model` | Model name (engine `http` only) |
-| `llm.systemPrompt` | Bot personality/instructions |
-| `bot.maxHistoryPerChat` | Messages to keep for context |
-| `bot.cooldownSeconds` | Min seconds between replies per chat |
+Full list — including `AI_LLM_*`, `AI_MAX_PENDING_APPROVALS`, `AI_REPLY_DELAY_MS`,
+`AI_IGNORE_*` and `AI_GROUP_REPLY_ONLY_ON_MENTION` — is in `.env.example`.
 
 ---
 
@@ -263,8 +211,9 @@ OpenWA/
 
 - **Use a dedicated number** — not your personal WhatsApp
 - **Rate limiting** is built in — don't blast messages
-- **Local only** — the LLM runs on your machine, no data leaves
-- **Conversation data** stays in `ai-bot/conversations/` on your disk
+- **Human-in-the-loop** — with `AI_APPROVAL_ENABLED=true` (default), no AI reply is ever sent without your explicit Approve
+- **Conversation data** stays in `data/ai/conversations/` on your disk
+- **Keep the LLM key secret** — `AI_LLM_API_KEY` lives only in `.env`, never in the repo
 
 ---
 

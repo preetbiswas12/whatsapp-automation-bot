@@ -481,6 +481,89 @@ export default () => ({
     })(),
   },
 
+  // AI assistant (formerly the standalone ai-bot). Evaluates inbound messages against learned reply
+  // patterns, drafts replies via a cloud LLM (kilo.ai) when nothing matches, and — while the
+  // approval gate is on, which is the shipped default — never sends anything without an operator
+  // explicitly approving the draft from the dashboard.
+  ai: {
+    // Master switch. Inert without an API key; with no key the module boots fine and every
+    // evaluation no-ops (see ai.service).
+    enabled: process.env.AI_ENABLED !== 'false',
+
+    // Human-in-the-loop gate. When true (default), NO AI reply is sent — not even a learned-pattern
+    // match — unless an operator approves it via the dashboard / approvals API.
+    approval: {
+      enabled: process.env.AI_APPROVAL_ENABLED !== 'false',
+      // Jaccard similarity above which a learned pattern counts as a match (0..1).
+      matchThreshold: (() => {
+        const n = parseFloat(process.env.AI_MATCH_THRESHOLD ?? '');
+        return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.6;
+      })(),
+      // Pending (unreviewed) drafts beyond this cap expire when a new one is enqueued, so an
+      // unattended queue can never grow without bound. 0 disables the cap.
+      maxPending: (() => {
+        const n = parseInt(process.env.AI_MAX_PENDING_APPROVALS ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 50;
+      })(),
+    },
+
+    // Reply behaviour
+    bot: {
+      // Simulated "typing" delay before the assistant acts, keeps replies feeling human (ms).
+      replyDelayMs: (() => {
+        const n = parseInt(process.env.AI_REPLY_DELAY_MS ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 1500;
+      })(),
+      ignoreFromMe: process.env.AI_IGNORE_FROM_ME !== 'false',
+      ignoreGroups: process.env.AI_IGNORE_GROUPS === 'true',
+      ignoreNewsletterChats: process.env.AI_IGNORE_NEWSLETTER_CHATS !== 'false',
+      // In group chats, only reply when the account is actually mentioned.
+      replyInGroupsOnlyWhenMentioned: process.env.AI_GROUP_REPLY_ONLY_ON_MENTION !== 'false',
+      // Per-chat turns kept for context (user+assistant messages; file stores up to 2× this).
+      maxHistoryPerChat: (() => {
+        const n = parseInt(process.env.AI_MAX_HISTORY_PER_CHAT ?? '', 10);
+        return Number.isFinite(n) && n > 0 ? n : 20;
+      })(),
+      // Cooldown between replies in the same chat, so the assistant never spams a conversation.
+      cooldownSeconds: (() => {
+        const n = parseInt(process.env.AI_COOLDOWN_SECONDS ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 5;
+      })(),
+    },
+
+    // Cloud LLM engine (kilo.ai gateway). The GGUF engine of the old ai-bot is deliberately not
+    // ported: OpenWA has no in-process model runtime, and all deployments use the cloud API.
+    llm: {
+      host: process.env.AI_LLM_HOST || 'https://api.kilo.ai/api/gateway',
+      model: process.env.AI_LLM_MODEL || 'kilo-auto/free',
+      // JWT bearer token for the gateway. Never committed: lives only in .env / the environment.
+      apiKey: process.env.AI_LLM_API_KEY || '',
+      completionsPath: process.env.AI_LLM_COMPLETIONS_PATH || '/chat/completions',
+      modelsPath: process.env.AI_LLM_MODELS_PATH || '/models',
+      maxTokens: (() => {
+        const n = parseInt(process.env.AI_LLM_MAX_TOKENS ?? '', 10);
+        return Number.isFinite(n) && n > 0 ? n : 512;
+      })(),
+      temperature: (() => {
+        const n = parseFloat(process.env.AI_LLM_TEMPERATURE ?? '');
+        return Number.isFinite(n) && n >= 0 && n <= 2 ? n : 0.7;
+      })(),
+      timeoutSeconds: (() => {
+        const n = parseInt(process.env.AI_LLM_TIMEOUT_SECONDS ?? '', 10);
+        return Number.isFinite(n) && n > 0 ? n : 120;
+      })(),
+      maxRetries: (() => {
+        const n = parseInt(process.env.AI_LLM_MAX_RETRIES ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 3;
+      })(),
+      // Strip reasoning/thinking blocks from model output so drafts are the answer only.
+      stripReasoning: process.env.AI_LLM_STRIP_REASONING !== 'false',
+      systemPrompt:
+        process.env.AI_SYSTEM_PROMPT ||
+        'You are a helpful WhatsApp assistant. Answer concisely in 1-2 short sentences, in the same language the user wrote in. Never include reasoning or thinking blocks.',
+    },
+  },
+
   // Server-side media conversion (opt-in): transcodes caller-supplied audio and video into the
   // shapes WhatsApp clients actually play, by running the ffmpeg binary. Nothing is converted
   // implicitly — only the explicit conversion endpoints use this.

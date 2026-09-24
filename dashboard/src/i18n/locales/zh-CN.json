@@ -62,6 +62,8 @@
     "templates": "Templates",
     "apiKeys": "API 密钥",
     "messageTester": "消息测试器",
+
+    "ai": "AI 审批",
     "infrastructure": "基础设施",
     "plugins": "插件",
     "logs": "日志"
@@ -1017,5 +1019,69 @@
       "current": "当前会话"
     },
     "loading": "搜索中…"
+  },
+  "ai": {
+    "title": "AI 审批",
+    "subtitle": "发送前请审核 AI 生成的回复。未经您的批准，不会发送任何内容。",
+    "loadError": "无法加载 AI 助手状态。",
+    "status": {
+      "enabled": "AI 已启用",
+      "disabled": "AI 已禁用",
+      "approvalGate": "审批闸门已开启",
+      "approvalOff": "审批闸门已关闭",
+      "reachable": "LLM 可连接",
+      "unreachable": "LLM 不可连接",
+      "pendingCount": "{{count}} 条待处理",
+      "patternCount": "{{count}} 个模式"
+    },
+    "tabs": {
+      "pending": "待处理",
+      "resolved": "已处理",
+      "patterns": "模式"
+    },
+    "kind": {
+      "pattern": "模式",
+      "draft": "草稿",
+      "match": "匹配"
+    },
+    "card": {
+      "original": "收到的消息",
+      "draft": "草稿回复",
+      "summary": "摘要"
+    },
+    "actions": {
+      "approve": "批准并发送",
+      "reject": "拒绝",
+      "deletePattern": "删除模式"
+    },
+    "empty": {
+      "pendingTitle": "没有待处理的审批",
+      "pendingDescription": "当收到的消息触发回复时，会显示在这里供您审核。",
+      "resolvedTitle": "没有已处理的项目",
+      "resolvedDescription": "已批准和已拒绝的草稿会显示在这里。",
+      "patternsTitle": "没有已学习的模式",
+      "patternsDescription": "已批准的回复会保存为可重复使用的模式。"
+    },
+    "resolved": {
+      "pending": "待处理",
+      "approved": "已批准",
+      "rejected": "已拒绝",
+      "expired": "已过期"
+    },
+    "patterns": {
+      "uses": "{{count}} 次使用",
+      "keywords": "触发词",
+      "reply": "回复",
+      "deleteTitle": "删除模式",
+      "deleteConfirm": "此模式将不再触发自动草稿回复。"
+    },
+    "toasts": {
+      "approved": "回复已批准并发送",
+      "approveFailed": "批准失败：{{message}}",
+      "rejected": "回复已拒绝",
+      "rejectFailed": "拒绝失败：{{message}}",
+      "patternDeleted": "模式已删除",
+      "patternDeleteFailed": "删除模式失败：{{message}}"
+    }
   }
 }

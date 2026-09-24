@@ -62,6 +62,8 @@
     "templates": "Templates",
     "apiKeys": "API 金鑰",
     "messageTester": "訊息測試器",
+
+    "ai": "AI 審批",
     "infrastructure": "基礎架構",
     "plugins": "外掛",
     "logs": "記錄"
@@ -1017,5 +1019,69 @@
       "current": "目前工作階段"
     },
     "loading": "搜尋中…"
+  },
+  "ai": {
+    "title": "AI 審批",
+    "subtitle": "發送前請審核 AI 生成的回覆。未經您的批准，不會發送任何內容。",
+    "loadError": "無法載入 AI 助手狀態。",
+    "status": {
+      "enabled": "AI 已啟用",
+      "disabled": "AI 已停用",
+      "approvalGate": "審批閘門已開啟",
+      "approvalOff": "審批閘門已關閉",
+      "reachable": "LLM 可連接",
+      "unreachable": "LLM 不可連接",
+      "pendingCount": "{{count}} 則待處理",
+      "patternCount": "{{count}} 個模式"
+    },
+    "tabs": {
+      "pending": "待處理",
+      "resolved": "已處理",
+      "patterns": "模式"
+    },
+    "kind": {
+      "pattern": "模式",
+      "draft": "草稿",
+      "match": "匹配"
+    },
+    "card": {
+      "original": "收到的訊息",
+      "draft": "草稿回覆",
+      "summary": "摘要"
+    },
+    "actions": {
+      "approve": "批准並發送",
+      "reject": "拒絕",
+      "deletePattern": "刪除模式"
+    },
+    "empty": {
+      "pendingTitle": "沒有待處理的審批",
+      "pendingDescription": "當收到的訊息觸發回覆時，會顯示在這裡供您審核。",
+      "resolvedTitle": "沒有已處理的項目",
+      "resolvedDescription": "已批准和已拒絕的草稿會顯示在這裡。",
+      "patternsTitle": "沒有已學習的模式",
+      "patternsDescription": "已批准的回覆會保存為可重複使用的模式。"
+    },
+    "resolved": {
+      "pending": "待處理",
+      "approved": "已批准",
+      "rejected": "已拒絕",
+      "expired": "已過期"
+    },
+    "patterns": {
+      "uses": "{{count}} 次使用",
+      "keywords": "觸發詞",
+      "reply": "回覆",
+      "deleteTitle": "刪除模式",
+      "deleteConfirm": "此模式將不再觸發自動草稿回覆。"
+    },
+    "toasts": {
+      "approved": "回覆已批准並發送",
+      "approveFailed": "批准失敗：{{message}}",
+      "rejected": "回覆已拒絕",
+      "rejectFailed": "拒絕失敗：{{message}}",
+      "patternDeleted": "模式已刪除",
+      "patternDeleteFailed": "刪除模式失敗：{{message}}"
+    }
   }
 }

@@ -9,12 +9,14 @@ import {
   pluginsApi,
   pluginInstancesApi,
   statsApi,
+  aiApi,
   type Webhook,
   type WebhookFilters,
   type TemplatePayload,
   type StatsPeriod,
   type CreateInstanceInput,
   type UpdateInstanceInput,
+  type AiApprovalItem,
 } from '../services/api';
 
 // ── Query Keys ────────────────────────────────────────────────────────
@@ -35,6 +37,9 @@ export const queryKeys = {
   currentEngine: ['engines', 'current'] as const,
   statsOverview: ['stats', 'overview'] as const,
   statsMessages: (period: string) => ['stats', 'messages', period] as const,
+  aiStatus: ['ai', 'status'] as const,
+  aiApprovals: ['ai', 'approvals'] as const,
+  aiPatterns: ['ai', 'patterns'] as const,
 };
 
 // ── Session Queries ───────────────────────────────────────────────────
@@ -367,5 +372,69 @@ export function useStatsMessagesQuery(period: StatsPeriod) {
     queryFn: () => statsApi.getMessages(period),
     staleTime: 30_000,
     retry: false,
+  });
+}
+
+// ── AI Assistant Queries ───────────────────────────────────────────────
+// The approvals queue is the human-in-the-loop gate, so it refetches on every focus and every
+// resolution — a stale queue is the one thing that must not linger. Patterns/status are calmer.
+
+export function useAiStatusQuery() {
+  return useQuery({
+    queryKey: queryKeys.aiStatus,
+    queryFn: aiApi.status,
+    staleTime: 30_000,
+  });
+}
+
+export function useAiApprovalsQuery() {
+  return useQuery({
+    queryKey: queryKeys.aiApprovals,
+    queryFn: aiApi.listApprovals,
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useAiPatternsQuery() {
+  return useQuery({
+    queryKey: queryKeys.aiPatterns,
+    queryFn: aiApi.listPatterns,
+    staleTime: 30_000,
+  });
+}
+
+export function useAiApproveMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiApi.approve(id),
+    onSuccess: (item: AiApprovalItem) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiApprovals });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiStatus });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiPatterns });
+      // A pattern match approval bumps usage; a fresh draft approval learns a new pattern.
+      void item;
+    },
+  });
+}
+
+export function useAiRejectMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiApi.reject(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiApprovals });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiStatus });
+    },
+  });
+}
+
+export function useAiDeletePatternMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiApi.deletePattern(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiPatterns });
+    },
   });
 }

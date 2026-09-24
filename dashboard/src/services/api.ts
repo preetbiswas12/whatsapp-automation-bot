@@ -1417,3 +1417,60 @@ export const statsApi = {
   getOverview: () => request<OverviewStats>('/stats/overview'),
   getMessages: (period: StatsPeriod) => request<MessageStats>(`/stats/messages?period=${period}`),
 };
+
+// =============================================================================
+// AI Assistant API (mirrors src/modules/ai)
+// =============================================================================
+
+export type AiApprovalKind = 'draft' | 'pattern';
+export type AiApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+
+export interface AiApprovalItem {
+  id: string;
+  sessionId: string;
+  sender: string;
+  chatId: string;
+  originalMessage: string;
+  draftReply: string;
+  summary: string;
+  chatSummary: string;
+  status: AiApprovalStatus;
+  kind: AiApprovalKind;
+  patternId?: string;
+  confidence?: number;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface AiPattern {
+  id: string;
+  keywords: string[];
+  originalMessage: string;
+  reply: string;
+  summary: string;
+  uses: number;
+  createdAt: string;
+  lastUsed: string;
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  approvalEnabled: boolean;
+  matchThreshold: number;
+  llmReachable: boolean;
+  llmModel: string;
+  pendingApprovals: number;
+  patternCount: number;
+}
+
+export const aiApi = {
+  status: () => request<AiStatus>('/ai/status'),
+  listApprovals: () => request<AiApprovalItem[]>('/ai/approvals'),
+  approve: (id: string) =>
+    request<AiApprovalItem>(`/ai/approvals/${id}/approve`, { method: 'POST' }),
+  reject: (id: string) =>
+    request<AiApprovalItem>(`/ai/approvals/${id}/reject`, { method: 'POST' }),
+  listPatterns: () => request<AiPattern[]>('/ai/patterns'),
+  deletePattern: (id: string) =>
+    request<void>(`/ai/patterns/${id}`, { method: 'DELETE' }),
+};

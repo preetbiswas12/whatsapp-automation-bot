@@ -62,6 +62,8 @@
     "templates": "Vorlagen",
     "apiKeys": "API-Schlüssel",
     "messageTester": "Nachrichtentester",
+
+    "ai": "KI-Freigaben",
     "infrastructure": "Infrastruktur",
     "plugins": "Plugins",
     "logs": "Protokolle"
@@ -1017,5 +1019,69 @@
       "current": "Diese Sitzung"
     },
     "loading": "Suche läuft…"
+  },
+  "ai": {
+    "title": "KI-Freigaben",
+    "subtitle": "Überprüfen Sie KI-generierte Antworten, bevor sie gesendet werden. Ohne Ihre Freigabe geht nichts raus.",
+    "loadError": "Status des KI-Assistenten konnte nicht geladen werden.",
+    "status": {
+      "enabled": "KI aktiviert",
+      "disabled": "KI deaktiviert",
+      "approvalGate": "Freigabesperre an",
+      "approvalOff": "Freigabesperre aus",
+      "reachable": "LLM erreichbar",
+      "unreachable": "LLM nicht erreichbar",
+      "pendingCount": "{{count}} offen",
+      "patternCount": "{{count}} Muster"
+    },
+    "tabs": {
+      "pending": "Offen",
+      "resolved": "Erledigt",
+      "patterns": "Muster"
+    },
+    "kind": {
+      "pattern": "Muster",
+      "draft": "Entwurf",
+      "match": "Übereinstimmung"
+    },
+    "card": {
+      "original": "Eingehende Nachricht",
+      "draft": "Antwortentwurf",
+      "summary": "Zusammenfassung"
+    },
+    "actions": {
+      "approve": "Genehmigen & senden",
+      "reject": "Ablehnen",
+      "deletePattern": "Muster löschen"
+    },
+    "empty": {
+      "pendingTitle": "Keine offenen Freigaben",
+      "pendingDescription": "Wenn eine eingehende Nachricht eine Antwort auslöst, erscheint sie hier zur Überprüfung.",
+      "resolvedTitle": "Keine erledigten Einträge",
+      "resolvedDescription": "Genehmigte und abgelehnte Entwürfe erscheinen hier.",
+      "patternsTitle": "Keine gelernten Muster",
+      "patternsDescription": "Genehmigte Antworten werden als wiederverwendbare Muster gespeichert."
+    },
+    "resolved": {
+      "pending": "Offen",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "expired": "Abgelaufen"
+    },
+    "patterns": {
+      "uses": "{{count}} Verwendungen",
+      "keywords": "Auslöser",
+      "reply": "Antwort",
+      "deleteTitle": "Muster löschen",
+      "deleteConfirm": "Dieses Muster löst keine automatischen Antwortentwürfe mehr aus."
+    },
+    "toasts": {
+      "approved": "Antwort genehmigt und gesendet",
+      "approveFailed": "Genehmigung fehlgeschlagen: {{message}}",
+      "rejected": "Antwort abgelehnt",
+      "rejectFailed": "Ablehnung fehlgeschlagen: {{message}}",
+      "patternDeleted": "Muster gelöscht",
+      "patternDeleteFailed": "Muster konnte nicht gelöscht werden: {{message}}"
+    }
   }
 }

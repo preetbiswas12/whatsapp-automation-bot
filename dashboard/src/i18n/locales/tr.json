@@ -62,6 +62,8 @@
     "templates": "Şablonlar",
     "apiKeys": "API Anahtarları",
     "messageTester": "Mesaj Test Aracı",
+
+    "ai": "AI Onayları",
     "infrastructure": "Altyapı",
     "plugins": "Eklentiler",
     "logs": "Kayıtlar (Logs)"
@@ -1017,5 +1019,69 @@
       "current": "Bu oturum"
     },
     "loading": "Aranıyor…"
+  },
+  "ai": {
+    "title": "AI Onayları",
+    "subtitle": "AI tarafından oluşturulan yanıtları göndermeden önce inceleyin. Onayınız olmadan hiçbir şey gönderilmez.",
+    "loadError": "AI asistanı durumu yüklenemedi.",
+    "status": {
+      "enabled": "AI etkin",
+      "disabled": "AI devre dışı",
+      "approvalGate": "Onay kapısı açık",
+      "approvalOff": "Onay kapısı kapalı",
+      "reachable": "LLM erişilebilir",
+      "unreachable": "LLM erişilemiyor",
+      "pendingCount": "{{count}} beklemede",
+      "patternCount": "{{count}} desen"
+    },
+    "tabs": {
+      "pending": "Bekleyen",
+      "resolved": "Çözülen",
+      "patterns": "Desenler"
+    },
+    "kind": {
+      "pattern": "Desen",
+      "draft": "Taslak",
+      "match": "eşleşme"
+    },
+    "card": {
+      "original": "Gelen mesaj",
+      "draft": "Taslak yanıt",
+      "summary": "Özet"
+    },
+    "actions": {
+      "approve": "Onayla ve gönder",
+      "reject": "Reddet",
+      "deletePattern": "Deseni sil"
+    },
+    "empty": {
+      "pendingTitle": "Bekleyen onay yok",
+      "pendingDescription": "Gelen bir mesaj yanıt tetiklediğinde burada incelemeniz için görünür.",
+      "resolvedTitle": "Çözülen öğe yok",
+      "resolvedDescription": "Onaylanan ve reddedilen taslaklar burada görünür.",
+      "patternsTitle": "Öğrenilen desen yok",
+      "patternsDescription": "Onaylanan yanıtlar yeniden kullanılabilir desenler olarak saklanır."
+    },
+    "resolved": {
+      "pending": "Bekliyor",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi",
+      "expired": "Süresi doldu"
+    },
+    "patterns": {
+      "uses": "{{count}} kullanım",
+      "keywords": "Tetikleyiciler",
+      "reply": "Yanıt",
+      "deleteTitle": "Deseni sil",
+      "deleteConfirm": "Bu desen artık otomatik taslak yanıtlarını tetiklemeyecek."
+    },
+    "toasts": {
+      "approved": "Yanıt onaylandı ve gönderildi",
+      "approveFailed": "Onaylama başarısız: {{message}}",
+      "rejected": "Yanıt reddedildi",
+      "rejectFailed": "Reddetme başarısız: {{message}}",
+      "patternDeleted": "Desen silindi",
+      "patternDeleteFailed": "Desen silinemedi: {{message}}"
+    }
   }
 }

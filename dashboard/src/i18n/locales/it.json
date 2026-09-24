@@ -62,6 +62,8 @@
     "templates": "Modelli",
     "apiKeys": "Chiavi API",
     "messageTester": "Messaggio di prova",
+
+    "ai": "Approvazioni IA",
     "infrastructure": "Infrastruttura",
     "plugins": "Plugin",
     "logs": "Log"
@@ -1017,5 +1019,69 @@
       "current": "Questa sessione"
     },
     "loading": "Ricerca…"
+  },
+  "ai": {
+    "title": "Approvazioni IA",
+    "subtitle": "Controlla le risposte generate dall’IA prima dell’invio. Niente parte senza la tua approvazione.",
+    "loadError": "Impossibile caricare lo stato dell’assistente IA.",
+    "status": {
+      "enabled": "IA attiva",
+      "disabled": "IA disattivata",
+      "approvalGate": "Porta di approvazione attiva",
+      "approvalOff": "Porta di approvazione disattivata",
+      "reachable": "LLM raggiungibile",
+      "unreachable": "LLM non raggiungibile",
+      "pendingCount": "{{count}} in attesa",
+      "patternCount": "{{count}} modelli"
+    },
+    "tabs": {
+      "pending": "In attesa",
+      "resolved": "Risolti",
+      "patterns": "Modelli"
+    },
+    "kind": {
+      "pattern": "Modello",
+      "draft": "Bozza",
+      "match": "corrispondenza"
+    },
+    "card": {
+      "original": "Messaggio in arrivo",
+      "draft": "Bozza di risposta",
+      "summary": "Riepilogo"
+    },
+    "actions": {
+      "approve": "Approva e invia",
+      "reject": "Rifiuta",
+      "deletePattern": "Elimina modello"
+    },
+    "empty": {
+      "pendingTitle": "Nessuna approvazione in attesa",
+      "pendingDescription": "Quando un messaggio in arrivo genera una risposta, appare qui per la revisione.",
+      "resolvedTitle": "Nessun elemento risolto",
+      "resolvedDescription": "Le bozze approvate e rifiutate appariranno qui.",
+      "patternsTitle": "Nessun modello appreso",
+      "patternsDescription": "Le risposte approvate vengono memorizzate come modelli riutilizzabili."
+    },
+    "resolved": {
+      "pending": "In attesa",
+      "approved": "Approvato",
+      "rejected": "Rifiutato",
+      "expired": "Scaduto"
+    },
+    "patterns": {
+      "uses": "{{count}} utilizzi",
+      "keywords": "Trigger",
+      "reply": "Risposta",
+      "deleteTitle": "Elimina modello",
+      "deleteConfirm": "Questo modello non genererà più bozze di risposta automatiche."
+    },
+    "toasts": {
+      "approved": "Risposta approvata e inviata",
+      "approveFailed": "Approvazione non riuscita: {{message}}",
+      "rejected": "Risposta rifiutata",
+      "rejectFailed": "Rifiuto non riuscito: {{message}}",
+      "patternDeleted": "Modello eliminato",
+      "patternDeleteFailed": "Eliminazione modello non riuscita: {{message}}"
+    }
   }
 }

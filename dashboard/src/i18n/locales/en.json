@@ -62,6 +62,7 @@
     "templates": "Templates",
     "apiKeys": "API Keys",
     "messageTester": "Message Tester",
+    "ai": "AI Approvals",
     "infrastructure": "Infrastructure",
     "plugins": "Plugins",
     "logs": "Logs"
@@ -1016,5 +1017,69 @@
       "current": "This session"
     },
     "loading": "Searching…"
+  },
+  "ai": {
+    "title": "AI Approvals",
+    "subtitle": "Review AI-generated replies before they are sent. Nothing goes out without your approval.",
+    "loadError": "Failed to load the AI assistant status.",
+    "status": {
+      "enabled": "AI enabled",
+      "disabled": "AI disabled",
+      "approvalGate": "Approval gate on",
+      "approvalOff": "Approval gate off",
+      "reachable": "LLM reachable",
+      "unreachable": "LLM unreachable",
+      "pendingCount": "{{count}} pending",
+      "patternCount": "{{count}} patterns"
+    },
+    "tabs": {
+      "pending": "Pending",
+      "resolved": "Resolved",
+      "patterns": "Patterns"
+    },
+    "kind": {
+      "pattern": "Pattern",
+      "draft": "Draft",
+      "match": "match"
+    },
+    "card": {
+      "original": "Incoming message",
+      "draft": "Draft reply",
+      "summary": "Summary"
+    },
+    "actions": {
+      "approve": "Approve & send",
+      "reject": "Reject",
+      "deletePattern": "Delete pattern"
+    },
+    "empty": {
+      "pendingTitle": "No pending approvals",
+      "pendingDescription": "When an incoming message triggers a reply, it appears here for your review.",
+      "resolvedTitle": "No resolved items",
+      "resolvedDescription": "Approved and rejected drafts will appear here.",
+      "patternsTitle": "No learned patterns",
+      "patternsDescription": "Approved replies are remembered as reusable patterns."
+    },
+    "resolved": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
+    "patterns": {
+      "uses": "{{count}} uses",
+      "keywords": "Triggers",
+      "reply": "Reply",
+      "deleteTitle": "Delete pattern",
+      "deleteConfirm": "This pattern will no longer trigger automatic draft replies."
+    },
+    "toasts": {
+      "approved": "Reply approved and sent",
+      "approveFailed": "Failed to approve: {{message}}",
+      "rejected": "Reply rejected",
+      "rejectFailed": "Failed to reject: {{message}}",
+      "patternDeleted": "Pattern deleted",
+      "patternDeleteFailed": "Failed to delete pattern: {{message}}"
+    }
   }
 }

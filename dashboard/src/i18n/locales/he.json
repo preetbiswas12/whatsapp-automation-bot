@@ -62,6 +62,8 @@
     "templates": "Templates",
     "apiKeys": "מפתחות API",
     "messageTester": "בדיקת הודעות",
+
+    "ai": "אישורי AI",
     "infrastructure": "תשתית",
     "plugins": "תוספים",
     "logs": "לוגים"
@@ -1026,5 +1028,69 @@
       "current": "הפעלה זו"
     },
     "loading": "מחפש…"
+  },
+  "ai": {
+    "title": "אישורי AI",
+    "subtitle": "בדוק תשובות שנוצרו על ידי AI לפני שליחתן. שום דבר לא יוצא ללא אישורך.",
+    "loadError": "טעינת מצב עוזר ה-AI נכשלה.",
+    "status": {
+      "enabled": "AI מופעל",
+      "disabled": "AI מושבת",
+      "approvalGate": "שער אישור פעיל",
+      "approvalOff": "שער אישור כבוי",
+      "reachable": "LLM זמין",
+      "unreachable": "LLM לא זמין",
+      "pendingCount": "{{count}} בהמתנה",
+      "patternCount": "{{count}} תבניות"
+    },
+    "tabs": {
+      "pending": "בהמתנה",
+      "resolved": "טופלו",
+      "patterns": "תבניות"
+    },
+    "kind": {
+      "pattern": "תבנית",
+      "draft": "טיוטה",
+      "match": "התאמה"
+    },
+    "card": {
+      "original": "הודעה נכנסת",
+      "draft": "טיוטת תשובה",
+      "summary": "סיכום"
+    },
+    "actions": {
+      "approve": "אישור ושליחה",
+      "reject": "דחה",
+      "deletePattern": "מחק תבנית"
+    },
+    "empty": {
+      "pendingTitle": "אין אישורים בהמתנה",
+      "pendingDescription": "כאשר הודעה נכנסת מעוררת תשובה, היא תופיע כאן לבדיקה.",
+      "resolvedTitle": "אין פריטים מטופלים",
+      "resolvedDescription": "טיוטות שאושרו ונדחו יופיעו כאן.",
+      "patternsTitle": "אין תבניות שנלמדו",
+      "patternsDescription": "תשובות שאושרו נשמרות כתבניות לשימוש חוזר."
+    },
+    "resolved": {
+      "pending": "בהמתנה",
+      "approved": "אושר",
+      "rejected": "נדחה",
+      "expired": "פג תוקף"
+    },
+    "patterns": {
+      "uses": "{{count}} שימושים",
+      "keywords": "טריגרים",
+      "reply": "תשובה",
+      "deleteTitle": "מחק תבנית",
+      "deleteConfirm": "תבנית זו לא תעורר עוד טיוטות תשובה אוטומטיות."
+    },
+    "toasts": {
+      "approved": "התשובה אושרה ונשלחה",
+      "approveFailed": "האישור נכשל: {{message}}",
+      "rejected": "התשובה נדחתה",
+      "rejectFailed": "הדחייה נכשלה: {{message}}",
+      "patternDeleted": "התבנית נמחקה",
+      "patternDeleteFailed": "מחיקת התבנית נכשלה: {{message}}"
+    }
   }
 }
