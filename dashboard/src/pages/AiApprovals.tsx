@@ -10,6 +10,11 @@ import {
   Sparkles,
   BookMarked,
   Clock,
+  Edit3,
+  Save,
+  XSquare,
+  RefreshCw,
+  Send,
 } from 'lucide-react';
 import type { AiApprovalItem, AiPattern } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -22,6 +27,8 @@ import {
   useAiApproveMutation,
   useAiRejectMutation,
   useAiDeletePatternMutation,
+  useAiEditMutation,
+  useAiAgentMutation,
 } from '../hooks/queries';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
@@ -44,17 +51,24 @@ export function AiApprovals() {
   const approveMutation = useAiApproveMutation();
   const rejectMutation = useAiRejectMutation();
   const deletePatternMutation = useAiDeletePatternMutation();
+  const editMutation = useAiEditMutation();
+  const agentMutation = useAiAgentMutation();
 
   const {
     data: status,
     isLoading: loadingStatus,
     isError: statusError,
   } = useAiStatusQuery();
-  const { data: approvals = [], isLoading: loadingApprovals, isError: approvalsError } = useAiApprovalsQuery();
+  const { data: approvals = [], isLoading: loadingApprovals, isError: approvalsError, refetch: refetchApprovals } = useAiApprovalsQuery();
   const { data: patterns = [], isLoading: loadingPatterns, isError: patternsError } = useAiPatternsQuery();
 
   const [tab, setTab] = useState<Tab>('pending');
   const [deleteTarget, setDeleteTarget] = useState<AiPattern | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [agentPrompt, setAgentPrompt] = useState('');
+  const [agentPhone, setAgentPhone] = useState('');
+  const [showAgentInput, setShowAgentInput] = useState(false);
 
   const pending = approvals.filter(a => a.status === 'pending');
   const resolved = approvals.filter(a => a.status !== 'pending');
@@ -96,6 +110,62 @@ export function AiApprovals() {
     } catch (err) {
       toast.error(
         t('ai.toasts.patternDeleteFailed', {
+          message: err instanceof Error ? err.message : t('common.unknownError'),
+        }),
+      );
+    }
+  };
+
+  const handleEditStart = (item: AiApprovalItem) => {
+    setEditingId(item.id);
+    setEditText(item.customReply ?? item.draftReply);
+  };
+
+  const handleAgentSend = async () => {
+    if (!agentPrompt.trim() || !agentPhone.trim()) return;
+    try {
+      await agentMutation.mutateAsync({ prompt: agentPrompt.trim(), targetPhone: agentPhone.trim() });
+      setAgentPrompt('');
+      setAgentPhone('');
+      setShowAgentInput(false);
+      toast.success(t('ai.toasts.agentQueued'));
+    } catch (err) {
+      toast.error(
+        t('ai.toasts.agentFailed', {
+          message: err instanceof Error ? err.message : t('common.unknownError'),
+        }),
+      );
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const handleEditSave = async (item: AiApprovalItem) => {
+    try {
+      await editMutation.mutateAsync({ id: item.id, customReply: editText });
+      setEditingId(null);
+      setEditText('');
+      toast.success(t('ai.toasts.editSuccess'));
+    } catch (err) {
+      toast.error(
+        t('ai.toasts.editFailed', {
+          message: err instanceof Error ? err.message : t('common.unknownError'),
+        }),
+      );
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      toast.info(t('ai.toasts.refreshing'));
+      await refetchApprovals();
+      toast.success(t('ai.toasts.refreshSuccess'));
+    } catch (err) {
+      toast.error(
+        t('ai.toasts.refreshFailed', {
           message: err instanceof Error ? err.message : t('common.unknownError'),
         }),
       );
@@ -152,6 +222,74 @@ export function AiApprovals() {
         </div>
       )}
 
+      {/* Toolbar */}
+      <div className="ai-toolbar" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', gap: '0.5rem' }}>
+        <button className="btn-secondary" onClick={handleRefresh} disabled={loadingApprovals}>
+          {loadingApprovals ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          {t('common.refresh')}
+        </button>
+        <button
+          className="btn-primary"
+          onClick={() => setShowAgentInput(!showAgentInput)}
+          style={{ background: showAgentInput ? 'var(--primary-hover, #1da851)' : 'var(--primary)' }}
+        >
+          <Send size={16} />
+          {t('ai.actions.agent')}
+        </button>
+      </div>
+
+      {/* AI Agent Input */}
+      {showAgentInput && (
+        <div className="ai-agent-input" style={{
+          background: 'var(--bg-card, #fff)', border: '1px solid var(--border, #e5e7eb)',
+          borderRadius: 'var(--radius, 10px)', padding: '1rem', marginBottom: '1rem',
+        }}>
+          <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: 700 }}>
+            ✨ AI Agent — Send a message to someone
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <input
+              type="text"
+              placeholder="Enter phone number (e.g. 917439163739)"
+              value={agentPhone}
+              onChange={e => setAgentPhone(e.target.value)}
+              style={{
+                padding: '0.5rem 0.75rem', border: '1px solid var(--border, #e5e7eb)',
+                borderRadius: 'var(--radius-sm, 6px)', fontSize: '0.875rem',
+                fontFamily: 'inherit', color: 'var(--text-primary, #111827)',
+                background: 'var(--bg-input, #fff)',
+              }}
+            />
+            <textarea
+              placeholder="Describe what message to send (e.g. Tell them we'll call tomorrow at 3pm)"
+              value={agentPrompt}
+              onChange={e => setAgentPrompt(e.target.value)}
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.75rem',
+                border: '1px solid var(--border, #e5e7eb)', borderRadius: 'var(--radius-sm, 6px)',
+                fontFamily: 'inherit', fontSize: '0.875rem',
+                color: 'var(--text-primary, #111827)', background: 'var(--bg-input, #fff)',
+                resize: 'vertical', minHeight: '3rem',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn-secondary" onClick={() => { setShowAgentInput(false); setAgentPrompt(''); setAgentPhone(''); }}>
+                {t('common.cancel')}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleAgentSend}
+                disabled={agentMutation.isPending || !agentPrompt.trim() || !agentPhone.trim()}
+              >
+                {agentMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {t('ai.actions.sendViaAgent')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="ai-tabs" role="tablist">
         <button
@@ -198,11 +336,21 @@ export function AiApprovals() {
                   <div className="ai-card-header">
                     <div className="ai-card-header-left">
                       <span className={`ai-kind-tag ${item.kind}`}>
-                        {item.kind === 'pattern' ? t('ai.kind.pattern') : t('ai.kind.draft')}
+                        {item.kind === 'agent' ? 'Agent' : item.kind === 'pattern' ? t('ai.kind.pattern') : t('ai.kind.draft')}
                       </span>
                       {item.kind === 'pattern' && item.confidence !== undefined && (
                         <span className="ai-confidence">
                           {Math.round(item.confidence * 100)}% {t('ai.kind.match')}
+                        </span>
+                      )}
+                      {item.kind === 'agent' && item.targetPhone && (
+                        <span className="ai-confidence" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                          📞 {item.targetPhone}
+                        </span>
+                      )}
+                      {item.kind === 'agent' && (
+                        <span className="ai-msg-summary" style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #6b7280)' }}>
+                          ⏱ {t('ai.actions.agentDelayHint')}
                         </span>
                       )}
                     </div>
@@ -217,7 +365,21 @@ export function AiApprovals() {
                     </div>
                     <div className="ai-msg-block">
                       <span className="ai-msg-label">{t('ai.card.draft')}</span>
-                      <p className="ai-msg-text ai-msg-out">{item.draftReply}</p>
+                      {editingId === item.id ? (
+                        <textarea
+                          style={{
+                            width: '100%', boxSizing: 'border-box', marginTop: '0.25rem', padding: '0.5rem 0.625rem',
+                            border: '1px solid var(--primary, #25d366)', borderRadius: 'var(--radius, 10px)',
+                            fontFamily: 'inherit', fontSize: '0.875rem', color: 'var(--text-primary, #111827)',
+                            background: 'var(--bg-input, #fff)', resize: 'vertical', minHeight: '3rem',
+                          }}
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          rows={3}
+                        />
+                      ) : (
+                        <p className="ai-msg-text ai-msg-out">{item.customReply ?? item.draftReply}</p>
+                      )}
                     </div>
                     {item.summary && (
                       <div className="ai-msg-block">
@@ -229,30 +391,60 @@ export function AiApprovals() {
                   <div className="ai-card-footer">
                     <span className="ai-card-time">{formatWhen(item.createdAt)}</span>
                     <div className="ai-card-actions">
-                      <button
-                        className="btn-danger-outline"
-                        onClick={() => handleReject(item)}
-                        disabled={rejectMutation.isPending && rejectMutation.variables === item.id}
-                      >
-                        {rejectMutation.isPending && rejectMutation.variables === item.id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <X size={16} />
-                        )}
-                        {t('ai.actions.reject')}
-                      </button>
-                      <button
-                        className="btn-primary"
-                        onClick={() => handleApprove(item)}
-                        disabled={approveMutation.isPending && approveMutation.variables === item.id}
-                      >
-                        {approveMutation.isPending && approveMutation.variables === item.id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Check size={16} />
-                        )}
-                        {t('ai.actions.approve')}
-                      </button>
+                      {editingId === item.id ? (
+                        <>
+                          <button
+                            className="btn-primary"
+                            onClick={() => handleEditSave(item)}
+                            disabled={editMutation.isPending && editMutation.variables?.id === item.id}
+                          >
+                            {editMutation.isPending && editMutation.variables?.id === item.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Save size={16} />
+                            )}
+                            {t('ai.actions.saveDraft')}
+                          </button>
+                          <button className="btn-secondary" onClick={() => handleEditCancel()}>
+                            <XSquare size={16} />
+                            {t('ai.actions.cancelEdit')}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => handleEditStart(item)}
+                            title={t('ai.actions.editDraft')}
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button
+                            className="btn-danger-outline"
+                            onClick={() => handleReject(item)}
+                            disabled={rejectMutation.isPending && rejectMutation.variables === item.id}
+                          >
+                            {rejectMutation.isPending && rejectMutation.variables === item.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <X size={16} />
+                            )}
+                            {t('ai.actions.reject')}
+                          </button>
+                          <button
+                            className="btn-primary"
+                            onClick={() => handleApprove(item)}
+                            disabled={approveMutation.isPending && approveMutation.variables === item.id}
+                          >
+                            {approveMutation.isPending && approveMutation.variables === item.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Check size={16} />
+                            )}
+                            {t('ai.actions.approve')}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -279,7 +471,17 @@ export function AiApprovals() {
                     {t(`ai.resolved.${item.status}`)}
                   </span>
                   <span className="ai-resolved-chat">{item.chatId}</span>
-                  <span className="ai-resolved-snippet">{item.draftReply.slice(0, 80)}</span>
+                  <span className="ai-resolved-snippet">{(item.customReply ?? item.draftReply).slice(0, 80)}</span>
+                  {item.kind === 'agent' && item.sendAt && !item.sendError && Date.now() < new Date(item.sendAt).getTime() && (
+                    <span className="ai-resolved-snippet" style={{ color: '#f59e0b' }}>
+                      ⏳ {t('ai.actions.agentWillSend')}
+                    </span>
+                  )}
+                  {item.kind === 'agent' && item.sendError && (
+                    <span className="ai-resolved-snippet" style={{ color: '#ef4444' }} title={item.sendError}>
+                      ⚠ {t('ai.actions.agentSendFailed')}: {String(item.sendError).slice(0, 60)}
+                    </span>
+                  )}
                   <span className="ai-card-time">{formatWhen(item.resolvedAt || item.createdAt)}</span>
                 </div>
               ))}

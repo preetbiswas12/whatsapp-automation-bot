@@ -73,7 +73,23 @@
   color: var(--border);
 }
 
-/* ── Tabs ────────────────────────────────────────────────────────────── */
+/* ── Toolbar ─────────────────────────────────────────────────────── */
+
+.ai-approvals-page .ai-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.ai-approvals-page .ai-toolbar .btn-secondary svg {
+  transition: transform 0.3s ease;
+}
+
+.ai-approvals-page .ai-toolbar .btn-secondary:disabled svg {
+  animation: aiSpin 0.8s linear infinite;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────── */
 
 .ai-approvals-page .ai-tabs {
   display: inline-flex;

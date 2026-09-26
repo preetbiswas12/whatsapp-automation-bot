@@ -19,6 +19,8 @@ import { AiPattern, extractKeywords, jaccardSimilarity } from './ai-matcher';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
+export type AiApprovalKind = 'draft' | 'pattern' | 'agent';
+
 export interface AiApprovalItem {
   id: string;
   sessionId: string;
@@ -26,14 +28,24 @@ export interface AiApprovalItem {
   chatId: string;
   originalMessage: string;
   draftReply: string;
+  /** Operator override written before approval. Approve sends this instead of draftReply. */
+  customReply?: string | null;
   summary: string;
   chatSummary: string;
   status: ApprovalStatus;
-  /** Kind of draft: a fresh LLM draft, or a match against a learned pattern. */
-  kind: 'draft' | 'pattern';
+  /** Kind of draft: a fresh LLM draft, a match against a learned pattern, or an agent-generated message. */
+  kind: AiApprovalKind;
   /** Present only for `pattern` approvals: which pattern matched and with what confidence. */
   patternId?: string;
   confidence?: number;
+  /** Present only for `agent` approvals: the phone number the message is targeted to. */
+  targetPhone?: string;
+  /** Present only for `agent` approvals: the operator's prompt describing what to send. */
+  agentPrompt?: string;
+  /** Present only for `agent` approvals: when the message is scheduled to be sent (ISO 8601). */
+  sendAt?: string;
+  /** Present only for `agent` approvals: error from the delayed background send, if it failed. */
+  sendError?: string | null;
   createdAt: string;
   resolvedAt?: string;
 }
@@ -118,9 +130,12 @@ export class AiStoreService {
       draftReply: string;
       summary: string;
       chatSummary: string;
-      kind?: AiApprovalItem['kind'];
+      kind?: AiApprovalKind;
       patternId?: string;
       confidence?: number;
+      customReply?: string | null;
+      targetPhone?: string;
+      agentPrompt?: string;
     },
     maxPending: number,
   ): AiApprovalItem {
@@ -132,11 +147,14 @@ export class AiStoreService {
       chatId: entry.chatId,
       originalMessage: entry.originalMessage,
       draftReply: entry.draftReply,
+      customReply: entry.customReply ?? null,
       summary: entry.summary,
       chatSummary: entry.chatSummary,
       kind: entry.kind ?? 'draft',
       ...(entry.patternId ? { patternId: entry.patternId } : {}),
       ...(entry.confidence !== undefined ? { confidence: entry.confidence } : {}),
+      ...(entry.targetPhone ? { targetPhone: entry.targetPhone } : {}),
+      ...(entry.agentPrompt ? { agentPrompt: entry.agentPrompt } : {}),
       status: STATUS.PENDING,
       createdAt: new Date().toISOString(),
     };
@@ -161,6 +179,36 @@ export class AiStoreService {
     if (!item) return null;
     item.status = status;
     item.resolvedAt = new Date().toISOString();
+    this.writeJson(this.approvalsPath, approvals);
+    return item;
+  }
+
+  /** Record when an approved item is scheduled to actually fire (only used for agent sends). */
+  setSendAt(id: string, sendAt: string): AiApprovalItem | null {
+    const approvals = this.listApprovals();
+    const item = approvals.find(a => a.id === id);
+    if (!item) return null;
+    item.sendAt = sendAt;
+    this.writeJson(this.approvalsPath, approvals);
+    return item;
+  }
+
+  /** Record (or clear) the outcome of an agent's delayed background send. */
+  setSendError(id: string, error: string | null): AiApprovalItem | null {
+    const approvals = this.listApprovals();
+    const item = approvals.find(a => a.id === id);
+    if (!item) return null;
+    item.sendError = error;
+    this.writeJson(this.approvalsPath, approvals);
+    return item;
+  }
+
+  /** Set an operator-edited reply on a pending approval. */
+  setCustomReply(id: string, customReply: string | null): AiApprovalItem | null {
+    const approvals = this.listApprovals();
+    const item = approvals.find(a => a.id === id);
+    if (!item) return null;
+    item.customReply = customReply;
     this.writeJson(this.approvalsPath, approvals);
     return item;
   }

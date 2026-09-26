@@ -1,4 +1,4 @@
-import { ConflictException, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { BadRequestException, ConflictException, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Post, Body } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RequireRole, RequireUnscopedKey } from '../auth/decorators/auth.decorators';
 import { ApiKeyRole } from '../auth/entities/api-key.entity';
@@ -71,6 +71,30 @@ export class AiController {
   @ApiResponse({ status: 409, description: 'Approval already resolved.' })
   async reject(@Param('id', ParseUUIDPipe) id: string): Promise<AiApprovalItemDto> {
     return this.aiService.reject(id);
+  }
+
+  @Post('approvals/:id/edit')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Edit the draft reply before approving' })
+  @ApiResponse({ status: 200, description: 'Draft updated.', type: AiApprovalItemDto })
+  @ApiResponse({ status: 404, description: 'No such approval.' })
+  @ApiResponse({ status: 409, description: 'Approval already resolved.' })
+  async editApproval(@Param('id', ParseUUIDPipe) id: string, @Body() body: { customReply: string }): Promise<AiApprovalItemDto> {
+    if (!body.customReply?.trim()) throw new BadRequestException('customReply must not be empty');
+    return this.aiService.editApproval(id, body.customReply.trim());
+  }
+
+  @Post('agent')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send a message via the AI agent: provide a prompt and target phone' })
+  @ApiResponse({ status: 200, description: 'Agent draft queued for approval.', type: AiApprovalItemDto })
+  @ApiResponse({ status: 400, description: 'Invalid prompt or phone.' })
+  async sendAgent(@Body() body: { prompt: string; targetPhone: string }): Promise<AiApprovalItemDto> {
+    if (!body.prompt?.trim()) throw new BadRequestException('prompt must not be empty');
+    if (!body.targetPhone?.trim()) throw new BadRequestException('targetPhone must not be empty');
+    return this.aiService.sendAgentMessage(body.prompt.trim(), body.targetPhone.trim());
   }
 
   @Get('patterns')

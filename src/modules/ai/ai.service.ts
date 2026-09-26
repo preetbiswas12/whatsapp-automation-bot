@@ -27,6 +27,10 @@ interface AiBotSettings {
   replyInGroupsOnlyWhenMentioned: boolean;
   maxHistoryPerChat: number;
   cooldownSeconds: number;
+  /** Min delay before sending an agent-approved message (ms). Avoids WhatsApp spam flags. */
+  agentSendMinMs: number;
+  /** Max delay before sending an agent-approved message (ms). Randomized between min and max. */
+  agentSendMaxMs: number;
 }
 
 interface AiApprovalSettings {
@@ -233,28 +237,59 @@ export class AiService {
 
   // ─── Human actions (approvals) ─────────────────────────────────────────────
 
-  /** Send the approved draft, save the turn, and learn/refresh the pattern. */
+  /** Send the approved draft (or an operator-edited customReply), save the turn, and learn/refresh the pattern. */
   async approve(id: string): Promise<AiApprovalItem> {
     const item = this.store.getApproval(id);
     if (!item) throw new NotFoundException('Approval not found');
     if (item.status !== 'pending') throw new ConflictException(`Already ${item.status}`);
 
-    try {
-      await this.send(item.sessionId, item.chatId, item.draftReply);
+    // Mark approved instantly — the operator's action registers right away. Agent messages then
+    // send on a random 20-40s delay in the background to avoid WhatsApp spam flags.
+    this.store.setApprovalStatus(id, 'approved');
+    const replyToSend = item.customReply ?? item.draftReply;
+
+    if (item.kind === 'agent') {
       const bot = this.botSettings();
-      this.store.addAssistantMessage(item.sessionId, item.chatId, item.draftReply, bot.maxHistoryPerChat);
-      if (item.kind === 'pattern' && item.patternId) {
-        this.store.incrementPatternUsage(item.patternId);
-      } else {
-        this.store.learnPattern(item.originalMessage, item.draftReply, item.summary);
+      const delayMs = bot.agentSendMinMs + Math.floor(Math.random() * (bot.agentSendMaxMs - bot.agentSendMinMs));
+      this.store.setSendAt(id, new Date(Date.now() + delayMs).toISOString());
+      this.logger.log('Agent approval marked approved; will send in background', { id, delayMs });
+      // Fire-and-forget: errors are caught inside sendApprovedAgent and logged there.
+      void this.sendApprovedAgent(item, replyToSend, delayMs);
+    } else {
+      try {
+        await this.send(item.sessionId, item.chatId, replyToSend);
+        const bot = this.botSettings();
+        this.store.addAssistantMessage(item.sessionId, item.chatId, replyToSend, bot.maxHistoryPerChat);
+        if (item.kind === 'pattern' && item.patternId) {
+          this.store.incrementPatternUsage(item.patternId);
+        } else {
+          // Agent messages never reach this branch — they send via sendApprovedAgent.
+          this.store.learnPattern(item.originalMessage, replyToSend, item.summary);
+        }
+        this.cooldown.set(`${item.sessionId}:${item.chatId}`);
+        this.logger.log('AI reply sent & pattern learned', { id, chatId: item.chatId });
+      } catch (err) {
+        this.logger.warn('AI approval send failed', { id, error: err instanceof Error ? err.message : String(err) });
+        throw err;
       }
-      this.store.setApprovalStatus(id, 'approved');
+    }
+    return this.store.getApproval(id)!;
+  }
+
+  /** Wait the agent delay, then send the message, record the turn and set the cooldown. */
+  private async sendApprovedAgent(item: AiApprovalItem, replyToSend: string, delayMs: number): Promise<void> {
+    try {
+      await sleep(delayMs);
+      await this.send(item.sessionId, item.chatId, replyToSend);
+      const bot = this.botSettings();
+      this.store.addAssistantMessage(item.sessionId, item.chatId, replyToSend, bot.maxHistoryPerChat);
       this.cooldown.set(`${item.sessionId}:${item.chatId}`);
-      this.logger.log('AI reply sent & pattern learned', { id, chatId: item.chatId });
-      return this.store.getApproval(id)!;
+      this.store.setSendError(item.id, null);
+      this.logger.log('Agent message sent after delay', { id: item.id, chatId: item.chatId, delayMs });
     } catch (err) {
-      this.logger.warn('AI approval send failed', { id, error: err instanceof Error ? err.message : String(err) });
-      throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      this.store.setSendError(item.id, message);
+      this.logger.warn('Agent delayed send failed', { id: item.id, error: message });
     }
   }
 
@@ -266,6 +301,49 @@ export class AiService {
     this.store.setApprovalStatus(id, 'rejected');
     this.logger.log('AI draft rejected', { id });
     return this.store.getApproval(id)!;
+  }
+
+  /** Save an operator-edited reply on a pending approval. */
+  async editApproval(id: string, customReply: string): Promise<AiApprovalItem> {
+    const item = this.store.getApproval(id);
+    if (!item) throw new NotFoundException('Approval not found');
+    if (item.status !== 'pending') throw new ConflictException(`Already ${item.status}`);
+    this.store.setCustomReply(id, customReply);
+    this.logger.log('AI draft edited', { id, customReply });
+    return this.store.getApproval(id)!;
+  }
+
+  /**
+   * AI Agent: generate a draft reply targeting a specific phone number.
+   * The prompt describes what to say; the LLM generates a concise message
+   * which is queued for operator review (edit + approve).
+   */
+  async sendAgentMessage(prompt: string, targetPhone: string): Promise<AiApprovalItem> {
+    const history = this.store.listApprovals().filter(a => a.status === 'approved').slice(-10);
+    const contextHistory = history.map(a => ({ role: 'assistant' as const, content: a.draftReply }));
+
+    const systemPrompt = `You are a helpful WhatsApp assistant for OpenWA. Generate a short, friendly message to send to ${targetPhone}. The operator will review and approve before sending. Keep it concise (1-3 sentences). Match the tone of the prompt. Do NOT include reasoning or explanations — only the message text.`;
+
+    const draft = await this.llm.generateDraft(contextHistory, prompt);
+
+    const chatId = `${targetPhone}@c.us`;
+    const item = this.store.enqueue(
+      {
+        sessionId: 'main',
+        sender: 'AI Agent',
+        chatId,
+        originalMessage: prompt,
+        draftReply: draft.trim(),
+        summary: `Agent message to ${targetPhone}`,
+        chatSummary: '',
+        kind: 'agent',
+        targetPhone,
+        agentPrompt: prompt,
+      },
+      this.approvalSettings().maxPending,
+    );
+    this.logger.log('AI agent draft queued', { id: item.id, targetPhone, draft: draft.slice(0, 80) });
+    return item;
   }
 
   // ─── Read surfaces ─────────────────────────────────────────────────────────

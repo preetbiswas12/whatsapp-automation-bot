@@ -81,6 +81,11 @@ async function retry<T>(fn: () => Promise<T>, opts: { attempts: number; baseMs: 
 // models actually emit: `<thinking>...</thinking>` tags, and `### Reasoning: ... ### Answer: ...`.
 export function stripReasoning(output: string): string {
   let out = String(output);
+  // Local DeepSeek gateways echo the chat template into the answer, e.g.
+  // `<system text>### Instruction:\n<user text>\n### Response:\n<answer>\n<|EOT|>`.
+  // Remove the whole wrapper plus the end-of-turn marker so only the reply remains.
+  out = out.replace(/###\s*Instruction:[\s\S]*?###\s*Response:\s*/gi, '');
+  out = out.replace(/<|EOT|>/g, '');
   out = out.replace(
     /<\|?(?:begin_of_think|thinking|think|reasoning)\|?>[\s\S]*?<\|?(?:end_of_think|thinking|think|reasoning)\|?>/gi,
     '',
@@ -99,9 +104,10 @@ export class AiLlmService {
   // rationale) as the standalone bot's withLlmLock.
   private llmQueue: Promise<void> = Promise.resolve();
 
-  // Cheap in-memory probe cache: /models is called once per dashboard status poll, and kilo's free
-  // tier should not be hammered by page refreshes.
+  // Cheap in-memory probe cache: the gateway is probed at most once per dashboard status poll, so a
+  // slow local model doesn't stall page refreshes. Stale entries trigger a background re-probe.
   private reachableCache: { ok: boolean; at: number; error: string | null } | null = null;
+  private probeInFlight: boolean = false;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -184,32 +190,71 @@ export class AiLlmService {
     return this.withLlmLock(() => this.chatHttp(messages, opts));
   }
 
-  /** Best-effort reachability probe of the gateway's /models endpoint; cached 60s. */
-  async probeReachable(): Promise<boolean> {
+  /** Best-effort reachability probe of the gateway. Never blocks the caller: a stale cache entry
+   *  triggers a background re-probe while the last known state is served immediately. */
+  probeReachable(): Promise<boolean> {
     const s = this.settings();
     if (!s.apiKey) {
       this.reachableCache = { ok: false, at: Date.now(), error: 'AI_LLM_API_KEY is not configured' };
-      return false;
+      return Promise.resolve(false);
     }
     if (this.reachableCache && Date.now() - this.reachableCache.at < 60_000) {
-      return this.reachableCache.ok;
+      return Promise.resolve(this.reachableCache.ok);
     }
+    if (!this.probeInFlight) {
+      this.probeInFlight = true;
+      void this.runProbe().finally(() => {
+        this.probeInFlight = false;
+      });
+    }
+    return Promise.resolve(this.reachableCache?.ok ?? false);
+  }
+
+  private async runProbe(): Promise<void> {
+    const s = this.settings();
     try {
-      const res = await fetchWithTimeout(
-        `${s.host}${s.modelsPath}`,
-        { method: 'GET', headers: { Authorization: `Bearer ${s.apiKey}` } },
-        10_000,
-      );
-      const ok = res.ok;
-      this.reachableCache = { ok, at: Date.now(), error: ok ? null : `HTTP ${res.status}` };
-      return ok;
+      const probeModels = async (): Promise<boolean> => {
+        const res = await fetchWithTimeout(
+          `${s.host}${s.modelsPath}`,
+          { method: 'GET', headers: { Authorization: `Bearer ${s.apiKey}` } },
+          60_000,
+        );
+        return res.ok;
+      };
+      let ok = await probeModels();
+      let error: string | null = null;
+      if (!ok) {
+        // Some gateways (e.g. local DeepSeek proxies) don't expose a /models endpoint. Fall back
+        // to a minimal chat-completions call so the dashboard can still report the model online.
+        const probeChat = async (): Promise<boolean> => {
+          const res = await fetchWithTimeout(
+            `${s.host}${s.completionsPath}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.apiKey}` },
+              // A system message is required: this gateway hangs on user-only requests.
+              body: JSON.stringify({
+                model: s.model,
+                messages: [{ role: 'system', content: 'You are a helpful assistant.' }, { role: 'user', content: 'ping' }],
+                // A tiny but non-trivial budget: max_tokens: 1 can hang some local gateways.
+                max_tokens: 16,
+                stream: false,
+              }),
+            },
+            60_000,
+          );
+          return res.ok;
+        };
+        ok = await probeChat();
+        if (!ok) error = 'Neither /models nor /chat/completions reachable';
+      }
+      this.reachableCache = { ok, at: Date.now(), error };
     } catch (err) {
       this.reachableCache = {
         ok: false,
         at: Date.now(),
         error: err instanceof Error ? err.message : String(err),
       };
-      return false;
     }
   }
 

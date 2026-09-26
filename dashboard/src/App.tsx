@@ -40,14 +40,27 @@ function AppContent() {
   // handleLogin stores a fresh key would re-fire the startup re-validation effect below and
   // double the /auth/validate request on every sign-in — the effect is for genuine page
   // refreshes with a saved key only.
-  const [savedKey] = useState(() => sessionStorage.getItem('waa_api_key'));
+  //
+  // API_ACCESS_KEY is the SINGLE key the request layer (services/api.ts, hooks/useWebSocket.ts)
+  // reads on every call. The app previously wrote the API key under 'waa_api_key' while requests
+  // read 'openwa_api_key': a 401 deleted the request key and reloaded the page, but the auth gate
+  // still saw its own key, so the dashboard remounted keyless → 401 → reload, forever. Migrate a
+  // leftover 'waa_api_key' into the one source of truth and drop the alias so a stale key can
+  // never restart that loop again.
+  const [savedKey] = useState(() => {
+    const current = sessionStorage.getItem('openwa_api_key');
+    const legacy = sessionStorage.getItem('waa_api_key');
+    if (!current && legacy) sessionStorage.setItem('openwa_api_key', legacy);
+    if (legacy) sessionStorage.removeItem('waa_api_key');
+    return sessionStorage.getItem('openwa_api_key');
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(!!savedKey);
   const [, setApiKey] = useState(savedKey || '');
   const { setRole, role } = useRole();
 
   const handleLogin = (key: string, validatedRole?: string) => {
     setApiKey(key);
-    sessionStorage.setItem('waa_api_key', key);
+    sessionStorage.setItem('openwa_api_key', key);
 
     // The login page's validate response already carried the role, so no second /auth/validate
     // round-trip is needed here. An absent or unrecognized role falls back to viewer, the
@@ -61,7 +74,8 @@ function AppContent() {
     setApiKey('');
     setIsAuthenticated(false);
     setRole(null);
-    sessionStorage.removeItem('waa_api_key');
+    sessionStorage.removeItem('openwa_api_key');
+    sessionStorage.removeItem('waa_api_key'); // legacy alias, dropped since the key-drift fix
     // Wipe the React Query cache too: it is keyed by resource, not actor, so without a full
     // clear a logout → login in the same tab with a different key/scope shows the previous
     // actor's sessions/messages/apiKeys/audit rows.

@@ -438,3 +438,24 @@ export function useAiDeletePatternMutation() {
     },
   });
 }
+
+export function useAiEditMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, customReply }: { id: string; customReply: string }) => aiApi.edit(id, customReply),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiApprovals });
+    },
+  });
+}
+
+export function useAiAgentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ prompt, targetPhone }: { prompt: string; targetPhone: string }) => aiApi.sendAgent(prompt, targetPhone),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiApprovals });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiStatus });
+    },
+  });
+}

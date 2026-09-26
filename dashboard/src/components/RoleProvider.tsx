@@ -4,16 +4,16 @@ import { RoleContext } from '../hooks/useRole';
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<UserRole | null>(() => {
-    const saved = localStorage.getItem('waa_user_role');
+    const saved = localStorage.getItem('openwa_user_role');
     return (saved as UserRole) || null;
   });
 
   const setRole = useCallback((newRole: UserRole | null) => {
     setRoleState(newRole);
     if (newRole) {
-      localStorage.setItem('waa_user_role', newRole);
+      localStorage.setItem('openwa_user_role', newRole);
     } else {
-      localStorage.removeItem('waa_user_role');
+      localStorage.removeItem('openwa_user_role');
     }
   }, []);
 

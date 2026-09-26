@@ -1422,7 +1422,7 @@ export const statsApi = {
 // AI Assistant API (mirrors src/modules/ai)
 // =============================================================================
 
-export type AiApprovalKind = 'draft' | 'pattern';
+export type AiApprovalKind = 'draft' | 'pattern' | 'agent';
 export type AiApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
 export interface AiApprovalItem {
@@ -1432,12 +1432,22 @@ export interface AiApprovalItem {
   chatId: string;
   originalMessage: string;
   draftReply: string;
+  /** Operator override written before approval. Approve sends this instead of draftReply. */
+  customReply?: string | null;
   summary: string;
   chatSummary: string;
   status: AiApprovalStatus;
   kind: AiApprovalKind;
   patternId?: string;
   confidence?: number;
+  /** Present only for `agent` approvals: the phone number the message is targeted to. */
+  targetPhone?: string;
+  /** Present only for `agent` approvals: the operator's prompt describing what to send. */
+  agentPrompt?: string;
+  /** Present only for `agent` approvals: when the message is scheduled to be sent (ISO 8601). */
+  sendAt?: string;
+  /** Present only for `agent` approvals: error from the delayed background send, if it failed. */
+  sendError?: string | null;
   createdAt: string;
   resolvedAt?: string;
 }
@@ -1470,6 +1480,16 @@ export const aiApi = {
     request<AiApprovalItem>(`/ai/approvals/${id}/approve`, { method: 'POST' }),
   reject: (id: string) =>
     request<AiApprovalItem>(`/ai/approvals/${id}/reject`, { method: 'POST' }),
+  edit: (id: string, customReply: string) =>
+    request<AiApprovalItem>(`/ai/approvals/${id}/edit`, {
+      method: 'POST',
+      body: JSON.stringify({ customReply }),
+    }),
+  sendAgent: (prompt: string, targetPhone: string) =>
+    request<AiApprovalItem>('/ai/agent', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, targetPhone }),
+    }),
   listPatterns: () => request<AiPattern[]>('/ai/patterns'),
   deletePattern: (id: string) =>
     request<void>(`/ai/patterns/${id}`, { method: 'DELETE' }),

@@ -1050,7 +1050,15 @@
     "actions": {
       "approve": "Approve & send",
       "reject": "Reject",
-      "deletePattern": "Delete pattern"
+      "deletePattern": "Delete pattern",
+      "editDraft": "Edit draft",
+      "saveDraft": "Save draft",
+      "cancelEdit": "Cancel",
+      "agent": "Agent",
+      "sendViaAgent": "Send via Agent",
+      "agentDelayHint": "Will send in 20–40s after approval (random delay to avoid spam flags)",
+      "agentSendFailed": "Background send failed",
+      "agentWillSend": "Sending…"
     },
     "empty": {
       "pendingTitle": "No pending approvals",
@@ -1079,7 +1087,14 @@
       "rejected": "Reply rejected",
       "rejectFailed": "Failed to reject: {{message}}",
       "patternDeleted": "Pattern deleted",
-      "patternDeleteFailed": "Failed to delete pattern: {{message}}"
+      "patternDeleteFailed": "Failed to delete pattern: {{message}}",
+      "editSuccess": "Draft updated",
+      "editFailed": "Failed to update draft: {{message}}",
+      "refreshing": "Refreshing...",
+      "refreshSuccess": "Queue refreshed",
+      "refreshFailed": "Failed to refresh: {{message}}",
+      "agentQueued": "Message queued for your approval",
+      "agentFailed": "Agent failed: {{message}}"
     }
   }
 }

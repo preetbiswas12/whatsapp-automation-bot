@@ -514,6 +514,16 @@ export default () => ({
         const n = parseInt(process.env.AI_REPLY_DELAY_MS ?? '', 10);
         return Number.isFinite(n) && n >= 0 ? n : 1500;
       })(),
+      // Min delay before sending an agent-approved message (ms). Avoids WhatsApp spam flags.
+      agentSendMinMs: (() => {
+        const n = parseInt(process.env.AI_AGENT_SEND_MIN_MS ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 20000;
+      })(),
+      // Max delay before sending an agent-approved message (ms). Randomized between min and max.
+      agentSendMaxMs: (() => {
+        const n = parseInt(process.env.AI_AGENT_SEND_MAX_MS ?? '', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 40000;
+      })(),
       ignoreFromMe: process.env.AI_IGNORE_FROM_ME !== 'false',
       ignoreGroups: process.env.AI_IGNORE_GROUPS === 'true',
       ignoreNewsletterChats: process.env.AI_IGNORE_NEWSLETTER_CHATS !== 'false',

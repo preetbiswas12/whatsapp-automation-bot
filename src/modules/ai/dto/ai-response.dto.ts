@@ -36,8 +36,8 @@ export class AiApprovalItemDto {
   @ApiProperty({ enum: ['pending', 'approved', 'rejected', 'expired'], description: 'Approval state' })
   status!: ApprovalStatus;
 
-  @ApiProperty({ enum: ['draft', 'pattern'], description: 'Draft origin: fresh LLM draft or pattern match' })
-  kind!: 'draft' | 'pattern';
+  @ApiProperty({ enum: ['draft', 'pattern', 'agent'], description: 'Draft origin: fresh LLM draft, pattern match, or agent prompt' })
+  kind!: 'draft' | 'pattern' | 'agent';
 
   @ApiPropertyOptional({ description: 'Pattern id, present only for pattern-match drafts' })
   patternId?: string;
@@ -45,8 +45,17 @@ export class AiApprovalItemDto {
   @ApiPropertyOptional({ description: 'Pattern match confidence (0..1), pattern drafts only' })
   confidence?: number;
 
+  @ApiPropertyOptional({ description: 'Target phone number, present only for agent drafts' })
+  targetPhone?: string;
+
+  @ApiPropertyOptional({ description: 'Operator prompt, present only for agent drafts' })
+  agentPrompt?: string;
+
   @ApiProperty({ description: 'When the draft was queued (ISO 8601)' })
   createdAt!: string;
+
+  @ApiPropertyOptional({ description: 'Operator-edited reply, set before approval' })
+  customReply?: string | null;
 
   @ApiPropertyOptional({ description: 'When the draft was resolved (ISO 8601)' })
   resolvedAt?: string;
